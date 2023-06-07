@@ -8,6 +8,8 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+env/
+.venv
 build/
 develop-eggs/
 dist/
@@ -19,12 +21,10 @@ lib64/
 parts/
 sdist/
 var/
-wheels/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
+**/_version.py
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -39,7 +39,6 @@ pip-delete-this-directory.txt
 # Unit test / coverage reports
 htmlcov/
 .tox/
-.nox/
 .coverage
 .coverage.*
 .cache
@@ -50,6 +49,9 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+cov.xml
+.pytest_cache/
+.mypy_cache/
 
 # Translations
 *.mo
@@ -158,3 +160,12 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+target/
+
+# likely venv names
+.venv*
+venv*
+
+# further build artifacts
+lockfiles/
+
