@@ -1,16 +1,13 @@
-from argparse import ArgumentParser
-
-from . import __version__
+from IPython import start_ipython
 
 __all__ = ["main"]
 
 
-def main(args=None):
-    parser = ArgumentParser()
-    parser.add_argument("-v", "--version", action="version", version=__version__)
-    args = parser.parse_args(args)
+def main():
+    # TODO CHECK FOR VENV
+
+    start_ipython()
 
 
-# test with: python -m jungfrau_commissioning
 if __name__ == "__main__":
     main()

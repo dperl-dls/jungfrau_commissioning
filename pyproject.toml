@@ -13,9 +13,12 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
 ]
-description = "One line description of your module"
+description = "Bluesky tooling for comissioning the Jungfrau detector on I24"
 dependencies = [
     "typing-extensions;python_version<'3.8'",
+    "dodal @ git+https://github.com/DiamondLightSource/python-dodal.git",
+    "ipython",
+    "pytest",
 ] # Add project dependencies here, e.g. ["click", "numpy"]
 dynamic = ["version"]
 license.file = "LICENSE"
