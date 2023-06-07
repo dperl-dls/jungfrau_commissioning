@@ -1,14 +1,14 @@
 API
 ===
 
-.. automodule:: python3_pip_skeleton
+.. automodule:: jungfrau_commissioning
 
-    ``python3_pip_skeleton``
+    ``jungfrau_commissioning``
     -----------------------------------
 
-This is the internal API reference for python3_pip_skeleton
+This is the internal API reference for jungfrau_commissioning
 
-.. data:: python3_pip_skeleton.__version__
+.. data:: jungfrau_commissioning.__version__
     :type: str
 
     Version number as calculated by https://github.com/pypa/setuptools_scm
