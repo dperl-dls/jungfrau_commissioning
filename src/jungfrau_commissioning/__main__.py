@@ -8,7 +8,7 @@ from traitlets.config import Config
 
 from jungfrau_commissioning.utils.utils import text_colors as col
 
-__all__ = ["main", "hlp", "i24", "list_devices"]
+__all__ = ["main", "hlp", "list_devices"]
 
 welcome_message = f"""
 There are a bunch of available functions. Most of them are Bluesky plans which \
@@ -57,7 +57,10 @@ def hlp(arg: Callable | None = None):
 
 setup: Config = Config()
 setup.InteractiveShellApp.exec_lines = [
-    "from jungfrau_commissioning.__main__ import *",
+    "from jungfrau_commissioning import plans  ",
+    "from jungfrau_commissioning.__main__ import hlp ",
+    "from jungfrau_commissioning.utils.log import set_up_logging_handlers",
+    "set_up_logging_handlers()",
     "hlp()",
     "print('System Ready!')",
 ]
