@@ -12,9 +12,19 @@ Documentation  https://dperl-dls.github.io/jungfrau_commissioning
 Releases       https://github.com/dperl-dls/jungfrau_commissioning/releases
 ============== ==============================================================
 
+To setup the environment, please run:
+
+    $ ./setup_environment.sh
+
 Running main starts an ipython terminal with imported ophyd devices and plans ready to run:
 
     $ python -m jungfrau_commissioning 
+
+To explore and edit the code for this project and the associated dodal repository at once:
+
+    $ module load vscode
+    $ code .vscode/jungfrau_commissioning.code-workspace
+
 
 .. |code_ci| image:: https://github.com/dperl-dls/jungfrau_commissioning/actions/workflows/code.yml/badge.svg?branch=main
     :target: https://github.com/dperl-dls/jungfrau_commissioning/actions/workflows/code.yml

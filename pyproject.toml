@@ -16,7 +16,7 @@ classifiers = [
 description = "Bluesky tooling for comissioning the Jungfrau detector on I24"
 dependencies = [
     "typing-extensions;python_version<'3.8'",
-    "dodal @ git+https://github.com/DiamondLightSource/python-dodal.git",
+    "python-artemis @ git+https://github.com/DiamondLightSource/python-artemis.git",
     "ipython",
     "pytest",
 ] # Add project dependencies here, e.g. ["click", "numpy"]
