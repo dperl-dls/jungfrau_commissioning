@@ -8,11 +8,12 @@ mkdir .venv
 module load python/3.10
 python -m venv .venv
 # Use local ipython configs for this project
-sed -i "43i export IPYTHONPATH" .venv/bin/activate
-sed -i "43i IPYTHONPATH=$PWD/.venv/ipython/" .venv/bin/activate
-sed -i "30i \ \ \ \ unset IPYTHONPATH" .venv/bin/activate
+sed -i "43i export IPYTHONDIR" .venv/bin/activate
+sed -i "43i IPYTHONDIR=$PWD/.venv/ipython/" .venv/bin/activate
+sed -i "30i \ \ \ \ unset IPYTHONDIR" .venv/bin/activate
 
 source .venv/bin/activate
+
 pip install -e .[dev]
 # Ensure we use a local version of dodal
 if [ ! -d "../dodal" ]; then
@@ -20,3 +21,6 @@ if [ ! -d "../dodal" ]; then
 fi
 pip uninstall -y dodal
 pip install -e ../dodal[dev]
+
+mkdir .venv/ipython
+ipython profile create jungfrau

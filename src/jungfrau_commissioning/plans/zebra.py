@@ -4,11 +4,13 @@ from dodal.devices.zebra import (
     IN3_TTL,
     IN4_TTL,
     OR1,
+    PC_GATE_SOURCE_POSITION,
     PC_PULSE,
+    PC_PULSE_SOURCE_POSITION,
     TTL_DETECTOR,
     TTL_SHUTTER,
     TTL_XSPRESS3,
-    I03Axes,
+    I24Axes,
     RotationDirection,
     Zebra,
 )
@@ -17,6 +19,7 @@ from jungfrau_commissioning.utils.log import LOGGER
 
 
 def arm_zebra(zebra: Zebra, timeout: float = 3):
+    """Send a demand to arm the Zebra, wait timeout seconds before failing"""
     yield from bps.abs_set(zebra.pc.arm_demand, 1)
     armed = yield from bps.rd(zebra.pc.armed)
     time = 0.0
@@ -29,7 +32,8 @@ def arm_zebra(zebra: Zebra, timeout: float = 3):
 
 
 def disarm_zebra(zebra: Zebra, timeout: float = 3):
-    yield from bps.abs_set(zebra.pc.arm_demand, 0)
+    """Send a demand to disarm the Zebra, wait timeout seconds before failing"""
+    yield from bps.abs_set(zebra.pc.disarm_demand, 1)
     armed = yield from bps.rd(zebra.pc.armed)
     time = 0.0
     while armed and time < timeout:
@@ -42,7 +46,7 @@ def disarm_zebra(zebra: Zebra, timeout: float = 3):
 
 def setup_zebra_for_rotation(
     zebra: Zebra,
-    axis: I03Axes = I03Axes.OMEGA,
+    axis: I24Axes = I24Axes.OMEGA,
     start_angle: float = 0,
     scan_width: float = 360,
     direction: RotationDirection = RotationDirection.POSITIVE,
@@ -72,6 +76,9 @@ def setup_zebra_for_rotation(
             "Use RotationDirection.POSITIVE or RotationDirection.NEGATIVE."
         )
     LOGGER.info("ZEBRA SETUP: START")
+    LOGGER.info("ZEBRA SETUP: Enable PC")
+    yield from bps.abs_set(zebra.pc.gate_source, PC_GATE_SOURCE_POSITION, group=group)
+    yield from bps.abs_set(zebra.pc.pulse_source, PC_PULSE_SOURCE_POSITION, group=group)
     # must be on for shutter trigger to be enabled
     yield from bps.abs_set(zebra.inputs.soft_in_1, 1, group=group)
     # Set gate start, adjust for shutter opening time if necessary

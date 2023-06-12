@@ -37,13 +37,16 @@ To list all the available devices in the {col.CYAN}i24{col.ENDC} module you can 
 To list all the available plans in this package you can run:
 
     {col.BLUE}list_plans(){col.ENDC}
-
 """
 
 
 def list_devices():
     for dev in collect_factories(i24):
         print(f"    {col.CYAN}i24.{dev}(){col.ENDC}")
+
+
+def list_plans():
+    print("Not working right now sorry")
 
 
 def hlp(arg: Callable | None = None):
@@ -56,15 +59,7 @@ def hlp(arg: Callable | None = None):
 
 
 setup: Config = Config()
-setup.InteractiveShellApp.exec_lines = [
-    "from jungfrau_commissioning import plans  ",
-    "from jungfrau_commissioning.__main__ import hlp ",
-    "from jungfrau_commissioning.utils.log import set_up_logging_handlers",
-    "from dodal.beamlines import i24",
-    "set_up_logging_handlers()",
-    "hlp()",
-    "print('System Ready!')",
-]
+setup.InteractiveShellApp.exec_files = ["setup_ipython.py"]
 
 
 def main():
