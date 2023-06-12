@@ -113,9 +113,6 @@ def rotation_scan_plan(
     LOGGER.info(f"moving omega to beginning, start_angle={start_angle}")
     yield from move_to_start_w_buffer(smargon.omega, start_angle)
 
-    # get some information for the ispyb deposition and trigger the callback
-    yield from read_hardware_for_ispyb()
-
     LOGGER.info(
         f"setting up zebra w: start_angle={start_angle}, scan_width={scan_width}"
     )

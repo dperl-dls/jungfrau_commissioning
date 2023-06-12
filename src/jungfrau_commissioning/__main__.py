@@ -60,6 +60,7 @@ setup.InteractiveShellApp.exec_lines = [
     "from jungfrau_commissioning import plans  ",
     "from jungfrau_commissioning.__main__ import hlp ",
     "from jungfrau_commissioning.utils.log import set_up_logging_handlers",
+    "from dodal.beamlines import i24",
     "set_up_logging_handlers()",
     "hlp()",
     "print('System Ready!')",
