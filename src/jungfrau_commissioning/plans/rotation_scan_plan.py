@@ -5,10 +5,8 @@ from typing import Any, Callable
 import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
 from dodal.beamlines import i24
-from dodal.devices.backlight import Backlight
-from dodal.devices.detector_motion import DetectorMotion
 from dodal.devices.eiger import EigerDetector
-from dodal.devices.smargon import Smargon
+from dodal.devices.i24.i24_vgonio import VGonio
 from dodal.devices.zebra import RotationDirection, Zebra
 from ophyd.device import Device
 from ophyd.epics_motor import EpicsMotor
@@ -38,29 +36,18 @@ OFFSET = 1
 SHUTTER_OPENING_TIME = 0.5
 
 
-def setup_sample_environment(
-    detector_motion: DetectorMotion,
-    backlight: Backlight,
-    group="setup_senv",
-):
-    yield from bps.abs_set(detector_motion.shutter, 1, group=group)
-    yield from bps.abs_set(backlight.pos, backlight.OUT, group=group)
-
-
-def cleanup_sample_environment(
+def cleanup_after_rotation(
     zebra: Zebra,
-    detector_motion: DetectorMotion,
     group="cleanup_senv",
 ):
     yield from bps.abs_set(zebra.inputs.soft_in_1, 0, group=group)
-    yield from bps.abs_set(detector_motion.shutter, 0, group=group)
 
 
 def move_to_start_w_buffer(axis: EpicsMotor, start_angle):
     """Move an EpicsMotor 'axis' to angle 'start_angle', modified by an offset and
     against the direction of rotation."""
     # can move to start as fast as possible
-    yield from bps.abs_set(axis.velocity, 120, wait=True)
+    yield from bps.abs_set(axis.velocity, 90, wait=True)
     start_position = start_angle - (OFFSET * DIRECTION)
     LOGGER.info(
         "moving to_start_w_buffer doing: start_angle-(offset*direction)"
@@ -91,10 +78,8 @@ def set_speed(axis: EpicsMotor, image_width, exposure_time, wait=True):
 def rotation_scan_plan(
     params: RotationScanParameters,
     eiger: EigerDetector,
-    smargon: Smargon,
+    gonio: VGonio,
     zebra: Zebra,
-    backlight: Backlight,
-    detector_motion: DetectorMotion,
 ):
     """A plan to collect diffraction images from a sample continuously rotating about
     a fixed axis - for now this axis is limited to omega."""
@@ -106,9 +91,8 @@ def rotation_scan_plan(
 
     LOGGER.info("setting up and staging eiger")
 
-    yield from setup_sample_environment(detector_motion, backlight)
     LOGGER.info(f"moving omega to beginning, start_angle={start_angle}")
-    yield from move_to_start_w_buffer(smargon.omega, start_angle)
+    yield from move_to_start_w_buffer(gonio.omega, start_angle)
 
     LOGGER.info(
         f"setting up zebra w: start_angle={start_angle}, scan_width={scan_width}"
@@ -135,20 +119,20 @@ def rotation_scan_plan(
         f"setting rotation speed for image_width, exposure_time"
         f" {image_width, exposure_time} to {image_width/exposure_time}"
     )
-    yield from set_speed(smargon.omega, image_width, exposure_time, wait=True)
+    yield from set_speed(gonio.omega, image_width, exposure_time, wait=True)
 
     yield from arm_zebra(zebra)
 
     LOGGER.info(f"{'increase' if DIRECTION > 0 else 'decrease'} omega by {scan_width}")
-    yield from move_to_end_w_buffer(smargon.omega, scan_width)
+    yield from move_to_end_w_buffer(gonio.omega, scan_width)
 
 
-def cleanup_plan(eiger, zebra, smargon, detector_motion, backlight):
-    yield from cleanup_sample_environment(zebra, detector_motion)
+def cleanup_plan(eiger, zebra, gonio):
+    yield from cleanup_after_rotation(zebra)
     yield from bpp.finalize_wrapper(disarm_zebra(zebra), bps.wait("cleanup_senv"))
 
 
-def get_plan(params: dict[str, Any], subscriptions: list[Callable]):
+def get_rotation_scan_plan(params: dict[str, Any], subscriptions: list[Callable]):
     """Call this to get back a plan generator function with attached callbacks and the \
     given parameters.
     Args:
@@ -166,7 +150,7 @@ def get_plan(params: dict[str, Any], subscriptions: list[Callable]):
         # TODO SETUP DETECTOR
         # devices["eiger"].set_detector_parameters(params.artemis_params.detector_params)
 
-        @bpp.stage_decorator([devices["eiger"]])
+        # @bpp.stage_decorator([devices["eiger"]])
         @bpp.set_run_key_decorator("rotation_scan_with_cleanup")
         @bpp.run_decorator(md={"subplan_name": "rotation_scan_with_cleanup"})
         @bpp.finalize_decorator(lambda: cleanup_plan(**devices))
@@ -175,4 +159,4 @@ def get_plan(params: dict[str, Any], subscriptions: list[Callable]):
 
         yield from rotation_with_cleanup_and_stage(params)
 
-    yield from rotation_scan_plan_with_stage_and_cleanup(params)
+    return rotation_scan_plan_with_stage_and_cleanup(params)
