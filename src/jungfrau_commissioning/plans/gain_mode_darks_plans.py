@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-from bluesky.plan_stubs import abs_set, rd
+from bluesky.plan_stubs import abs_set, rd, sleep
 from dodal.devices.i24.jungfrau import JungfrauM1
 
 from jungfrau_commissioning.plans.jungfrau_plans import setup_detector
@@ -32,7 +32,8 @@ def set_gain_mode(
 def do_dark_acquisition(jungfrau: JungfrauM1, exp_time_s, acq_time_us, n_frames):
     LOGGER.info("Setting up detector:")
     yield from setup_detector(jungfrau, exp_time_s, acq_time_us, n_frames, wait=True)
-    yield from setup_detector()
+    yield from abs_set(jungfrau.acquire_start, 1)
+    yield from sleep(exp_time_s * n_frames)
 
 
 def do_darks(
