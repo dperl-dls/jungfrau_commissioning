@@ -3,7 +3,6 @@ from enum import Enum
 from pathlib import Path
 
 from bluesky.plan_stubs import abs_set, rd
-from dodal.beamlines import i24
 from dodal.devices.i24.jungfrau import JungfrauM1
 
 from jungfrau_commissioning.utils.log import LOGGER
@@ -34,7 +33,7 @@ def do_dark_acquisition(jungfrau: JungfrauM1):
 
 
 def do_darks(
-    jungfrau: JungfrauM1 = i24.jungfrau(),
+    jungfrau: JungfrauM1,
     directory: str = "/tmp/",
     check_for_errors=True,
 ):

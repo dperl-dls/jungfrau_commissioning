@@ -68,7 +68,7 @@ def setup_zebra_for_rotation(
                             based on shutter time.
         shutter_time_and_velocity: tuple[float, float] representing the time it takes
                         (in seconds) for the shutter to open and the velocity of the
-                        scan (in deg/s). Used to ajust the gate start so that
+                        scan (in deg/s).
     """
     if not isinstance(direction, RotationDirection):
         raise ValueError(

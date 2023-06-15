@@ -9,8 +9,8 @@ from dodal.devices.zebra import RotationDirection, Zebra
 from ophyd.device import Device
 from ophyd.epics_motor import EpicsMotor
 
-from jungfrau_commissioning.plans.jungfrau import setup_detector
-from jungfrau_commissioning.plans.zebra import (
+from jungfrau_commissioning.plans.jungfrau_plans import setup_detector
+from jungfrau_commissioning.plans.zebra_plans import (
     arm_zebra,
     disarm_zebra,
     setup_zebra_for_rotation,
@@ -33,13 +33,6 @@ def create_rotation_scan_devices() -> dict[str, Device]:
 DIRECTION = RotationDirection.NEGATIVE
 OFFSET = 1.0
 SHUTTER_OPENING_TIME = 0.5
-
-
-def cleanup_after_rotation(
-    zebra: Zebra,
-    group="cleanup_senv",
-):
-    yield from bps.abs_set(zebra.inputs.soft_in_1, 0, group=group)
 
 
 def move_to_start_w_buffer(
@@ -141,9 +134,10 @@ def rotation_scan_plan(
     yield from move_to_end_w_buffer(gonio.omega, scan_width)
 
 
-def cleanup_plan(eiger, zebra, gonio):
-    yield from cleanup_after_rotation(zebra)
-    yield from bpp.finalize_wrapper(disarm_zebra(zebra), bps.wait("cleanup_senv"))
+def cleanup_plan(zebra: Zebra, group="cleanup"):
+    yield from bps.abs_set(zebra.inputs.soft_in_1, 0, group=group)
+    yield from disarm_zebra(zebra)
+    yield from bps.wait("cleanup")
 
 
 def get_rotation_scan_plan(params: RotationScanParameters):
@@ -162,7 +156,7 @@ def get_rotation_scan_plan(params: RotationScanParameters):
     ):
         @bpp.set_run_key_decorator("rotation_scan_with_cleanup")
         @bpp.run_decorator(md={"subplan_name": "rotation_scan_with_cleanup"})
-        @bpp.finalize_decorator(lambda: cleanup_plan(**devices))
+        @bpp.finalize_decorator(lambda: cleanup_plan(devices["zebra"]))
         def rotation_with_cleanup_and_stage(params):
             yield from rotation_scan_plan(params, **devices)
 

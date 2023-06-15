@@ -1,5 +1,5 @@
 import inspect
-from inspect import getmembers, isfunction
+from inspect import getmembers, isgeneratorfunction, signature
 from typing import Callable
 
 import IPython
@@ -7,9 +7,12 @@ from dodal.beamlines import i24
 from dodal.utils import collect_factories
 from traitlets.config import Config
 
-from jungfrau_commissioning.plans import gain_mode_and_darks as gain_mode_plans
-from jungfrau_commissioning.plans import rotation_scan_plan as rotation_scan_plans
-from jungfrau_commissioning.plans import zebra as zebra_plans
+from jungfrau_commissioning.plans import (
+    gain_mode_darks_plans,
+    jungfrau_plans,
+    rotation_scan_plans,
+    zebra_plans,
+)
 from jungfrau_commissioning.utils.utils import text_colors as col
 
 __all__ = ["main", "hlp", "list_devices"]
@@ -57,17 +60,27 @@ def list_devices():
 
 
 def pretty_print_module_functions(mod, indent=0):
-    for f in getmembers(mod, isfunction):
-        print(" " * indent + f"{col.CYAN}{f[0]}(){col.ENDC}")
+    sq = "'"
+    for name, function in [
+        (k, v)
+        for k, v in getmembers(mod, isgeneratorfunction)
+        if v.__module__ == mod.__name__
+    ]:
+        print(
+            " " * indent
+            + f"{col.CYAN}{name}({col.GREEN}{str(signature(function)).replace(sq,'').replace('(','').replace(')','')}{col.CYAN}){col.ENDC}"  # noqa
+        )
 
 
 def list_plans():
     print(f"{col.BLUE}gain_mode_plans:{col.ENDC}")
-    pretty_print_module_functions(gain_mode_plans, indent=4)
+    pretty_print_module_functions(gain_mode_darks_plans, indent=4)
     print(f"{col.BLUE}zebra_plans:{col.ENDC}")
     pretty_print_module_functions(zebra_plans, indent=4)
     print(f"{col.BLUE}rotation_scan_plans:{col.ENDC}")
     pretty_print_module_functions(rotation_scan_plans, indent=4)
+    print(f"{col.BLUE}jungfrau_plans:{col.ENDC}")
+    pretty_print_module_functions(jungfrau_plans, indent=4)
 
 
 def hlp(arg: Callable | None = None):
