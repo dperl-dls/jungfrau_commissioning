@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from typing import Any, Callable
-
 import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
 from dodal.beamlines import i24
-from dodal.devices.eiger import EigerDetector
-from dodal.devices.i24.i24_vgonio import VGonio
+from dodal.devices.i24.jungfrau import JungfrauM1
+from dodal.devices.i24.vgonio import VGonio
 from dodal.devices.zebra import RotationDirection, Zebra
 from ophyd.device import Device
 from ophyd.epics_motor import EpicsMotor
 
+from jungfrau_commissioning.plans.jungfrau import setup_detector
 from jungfrau_commissioning.plans.zebra import (
     arm_zebra,
     disarm_zebra,
@@ -24,7 +23,7 @@ def create_rotation_scan_devices() -> dict[str, Device]:
     """Ensures necessary devices have been instantiated and returns a dict with
     references to them"""
     devices = {
-        "eiger": i24.eiger(wait_for_connection=False),
+        "eiger": i24.jungfrau(),
         "gonio": i24.vgonio(),
         "zebra": i24.zebra(),
     }
@@ -32,7 +31,7 @@ def create_rotation_scan_devices() -> dict[str, Device]:
 
 
 DIRECTION = RotationDirection.NEGATIVE
-OFFSET = 1
+OFFSET = 1.0
 SHUTTER_OPENING_TIME = 0.5
 
 
@@ -43,25 +42,37 @@ def cleanup_after_rotation(
     yield from bps.abs_set(zebra.inputs.soft_in_1, 0, group=group)
 
 
-def move_to_start_w_buffer(axis: EpicsMotor, start_angle):
+def move_to_start_w_buffer(
+    axis: EpicsMotor,
+    start_angle: float,
+    wait: bool = True,
+    offset: float = OFFSET,
+    direction: RotationDirection = DIRECTION,
+):
     """Move an EpicsMotor 'axis' to angle 'start_angle', modified by an offset and
     against the direction of rotation."""
     # can move to start as fast as possible
     yield from bps.abs_set(axis.velocity, 90, wait=True)
-    start_position = start_angle - (OFFSET * DIRECTION)
+    start_position = start_angle - (offset * direction)
     LOGGER.info(
         "moving to_start_w_buffer doing: start_angle-(offset*direction)"
-        f" = {start_angle} - ({OFFSET} * {DIRECTION} = {start_position}"
+        f" = {start_angle} - ({offset} * {direction} = {start_position}"
     )
 
-    yield from bps.abs_set(axis, start_position, group="move_to_start")
+    yield from bps.abs_set(axis, start_position, group="move_to_start", wait=wait)
 
 
-def move_to_end_w_buffer(axis: EpicsMotor, scan_width: float, wait: float = True):
-    distance_to_move = (scan_width + 0.1 + OFFSET) * DIRECTION
+def move_to_end_w_buffer(
+    axis: EpicsMotor,
+    scan_width: float,
+    wait: bool = True,
+    offset: float = OFFSET,
+    direction: RotationDirection = DIRECTION,
+):
+    distance_to_move = (scan_width + 0.1 + offset) * direction
     LOGGER.info(
-        f"Given scan width of {scan_width}, offset of {OFFSET}, direction"
-        f" {DIRECTION}, apply a relative set to omega of: {distance_to_move}"
+        f"Given scan width of {scan_width}, offset of {offset}, direction"
+        f" {direction}, apply a relative set to omega of: {distance_to_move}"
     )
     yield from bps.rel_set(axis, distance_to_move, group="move_to_end", wait=wait)
 
@@ -77,7 +88,7 @@ def set_speed(axis: EpicsMotor, image_width, exposure_time, wait=True):
 @bpp.run_decorator(md={"subplan_name": "rotation_scan_main"})
 def rotation_scan_plan(
     params: RotationScanParameters,
-    eiger: EigerDetector,
+    jungfrau: JungfrauM1,
     gonio: VGonio,
     zebra: Zebra,
 ):
@@ -89,7 +100,10 @@ def rotation_scan_plan(
     image_width = params.image_width_deg
     exposure_time = params.exposure_time_s
 
-    LOGGER.info("setting up and staging eiger")
+    LOGGER.info("setting up jungfrau")
+    yield from setup_detector(
+        jungfrau, params.exposure_time_s, params.detector_acquire_time_us, wait=True
+    )
 
     LOGGER.info(f"moving omega to beginning, start_angle={start_angle}")
     yield from move_to_start_w_buffer(gonio.omega, start_angle)
@@ -101,9 +115,9 @@ def rotation_scan_plan(
         zebra,
         start_angle=start_angle,
         scan_width=scan_width,
-        direction=DIRECTION,
+        direction=params.rotation_direction,
         shutter_time_and_velocity=(
-            SHUTTER_OPENING_TIME,
+            params.shutter_opening_time_s,
             image_width / exposure_time,
         ),
         group="setup_zebra",
@@ -132,7 +146,7 @@ def cleanup_plan(eiger, zebra, gonio):
     yield from bpp.finalize_wrapper(disarm_zebra(zebra), bps.wait("cleanup_senv"))
 
 
-def get_rotation_scan_plan(params: dict[str, Any], subscriptions: list[Callable]):
+def get_rotation_scan_plan(params: RotationScanParameters):
     """Call this to get back a plan generator function with attached callbacks and the \
     given parameters.
     Args:
@@ -140,17 +154,12 @@ def get_rotation_scan_plan(params: dict[str, Any], subscriptions: list[Callable]
             schema in ./src/jungfrau_commissioning/utils/params.py.
             see "example_params.json" for an example.
         subscriptions: list of callback functions to attach - probably just \
-            [nexus_writer_callback]"""  # TODO params
+            [nexus_writer_callback]"""
     devices = create_rotation_scan_devices()
 
-    @bpp.subs_decorator(list(subscriptions))
     def rotation_scan_plan_with_stage_and_cleanup(
         params: RotationScanParameters,
     ):
-        # TODO SETUP DETECTOR
-        # devices["eiger"].set_detector_parameters(params.artemis_params.detector_params)
-
-        # @bpp.stage_decorator([devices["eiger"]])
         @bpp.set_run_key_decorator("rotation_scan_with_cleanup")
         @bpp.run_decorator(md={"subplan_name": "rotation_scan_with_cleanup"})
         @bpp.finalize_decorator(lambda: cleanup_plan(**devices))

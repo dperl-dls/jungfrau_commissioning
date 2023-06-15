@@ -7,7 +7,7 @@ from dodal.beamlines import i24
 from dodal.utils import collect_factories
 from traitlets.config import Config
 
-from jungfrau_commissioning.plans import gain_mode as gain_mode_plans
+from jungfrau_commissioning.plans import gain_mode_and_darks as gain_mode_plans
 from jungfrau_commissioning.plans import rotation_scan_plan as rotation_scan_plans
 from jungfrau_commissioning.plans import zebra as zebra_plans
 from jungfrau_commissioning.utils.utils import text_colors as col

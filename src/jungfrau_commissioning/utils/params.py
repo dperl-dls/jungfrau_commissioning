@@ -15,6 +15,7 @@ class RotationScanParameters(BaseModel):
     image_width_deg: float = 0.1
     omega_start_deg: float = 0.0
     exposure_time_s: float = 0.01
+    detector_acquire_time_us: float = 10.0
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0
@@ -57,4 +58,4 @@ class RotationScanParameters(BaseModel):
         return True
 
     def get_num_images(self):
-        return int(self.scan_width_deg / self.scan_width_deg)
+        return int(self.scan_width_deg / self.image_width_deg)
