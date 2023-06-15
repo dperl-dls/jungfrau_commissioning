@@ -11,6 +11,7 @@ from jungfrau_commissioning.plans import (
     gain_mode_darks_plans,
     jungfrau_plans,
     rotation_scan_plans,
+    utility_plans,
     zebra_plans,
 )
 from jungfrau_commissioning.utils.utils import text_colors as col
@@ -68,19 +69,21 @@ def pretty_print_module_functions(mod, indent=0):
     ]:
         print(
             " " * indent
-            + f"{col.CYAN}{name}({col.GREEN}{str(signature(function)).replace(sq,'').replace('(','').replace(')','')}{col.CYAN}){col.ENDC}"  # noqa
+            + f"{col.CYAN}{name}({col.GREEN}{str(signature(function)).replace(sq,'')[1:-1]}{col.CYAN}){col.ENDC}"  # noqa
         )
 
 
 def list_plans():
-    print(f"{col.BLUE}gain_mode_plans:{col.ENDC}")
-    pretty_print_module_functions(gain_mode_darks_plans, indent=4)
-    print(f"{col.BLUE}zebra_plans:{col.ENDC}")
-    pretty_print_module_functions(zebra_plans, indent=4)
-    print(f"{col.BLUE}rotation_scan_plans:{col.ENDC}")
-    pretty_print_module_functions(rotation_scan_plans, indent=4)
-    print(f"{col.BLUE}jungfrau_plans:{col.ENDC}")
-    pretty_print_module_functions(jungfrau_plans, indent=4)
+    plan_modules = [
+        gain_mode_darks_plans,
+        zebra_plans,
+        rotation_scan_plans,
+        jungfrau_plans,
+        utility_plans,
+    ]
+    for module in plan_modules:
+        print(f"{col.BLUE}{module.__name__}:{col.ENDC}")
+        pretty_print_module_functions(module, indent=4)
 
 
 def hlp(arg: Callable | None = None):

@@ -5,6 +5,7 @@ from pathlib import Path
 from bluesky.plan_stubs import abs_set, rd
 from dodal.devices.i24.jungfrau import JungfrauM1
 
+from jungfrau_commissioning.plans.jungfrau_plans import setup_detector
 from jungfrau_commissioning.utils.log import LOGGER
 
 
@@ -28,8 +29,10 @@ def set_gain_mode(
         LOGGER.warn(f"JF reporting error: {err}")
 
 
-def do_dark_acquisition(jungfrau: JungfrauM1):
-    ...
+def do_dark_acquisition(jungfrau: JungfrauM1, exp_time_s, acq_time_us, n_frames):
+    LOGGER.info("Setting up detector:")
+    yield from setup_detector(jungfrau, exp_time_s, acq_time_us, n_frames, wait=True)
+    yield from setup_detector()
 
 
 def do_darks(
@@ -46,9 +49,8 @@ def do_darks(
     yield from abs_set(
         jungfrau.file_directory,
         (directory_prefix / "G0").as_posix(),
-        check_for_errors=check_for_errors,
     )
-    yield from do_dark_acquisition(jungfrau)
+    yield from do_dark_acquisition(jungfrau, 0.001, 0.001, 1000)
 
     # Gain 1
     yield from set_gain_mode(
@@ -57,9 +59,8 @@ def do_darks(
     yield from abs_set(
         jungfrau.file_directory,
         (directory_prefix / "G1").as_posix(),
-        check_for_errors=check_for_errors,
     )
-    yield from do_dark_acquisition(jungfrau)
+    yield from do_dark_acquisition(jungfrau, 0.001, 0.0001, 1000)
 
     # Gain 2
     yield from set_gain_mode(
@@ -68,6 +69,5 @@ def do_darks(
     yield from abs_set(
         jungfrau.file_directory,
         (directory_prefix / "G2").as_posix(),
-        check_for_errors=check_for_errors,
     )
-    yield from do_dark_acquisition(jungfrau)
+    yield from do_dark_acquisition(jungfrau, 0.001, 0.001, 1000)

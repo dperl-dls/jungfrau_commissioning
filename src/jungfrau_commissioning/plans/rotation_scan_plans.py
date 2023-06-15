@@ -10,6 +10,7 @@ from ophyd.device import Device
 from ophyd.epics_motor import EpicsMotor
 
 from jungfrau_commissioning.plans.jungfrau_plans import setup_detector
+from jungfrau_commissioning.plans.utility_plans import get_beam_parameters, get_x_y_z
 from jungfrau_commissioning.plans.zebra_plans import (
     arm_zebra,
     disarm_zebra,
@@ -26,6 +27,7 @@ def create_rotation_scan_devices() -> dict[str, Device]:
         "eiger": i24.jungfrau(),
         "gonio": i24.vgonio(),
         "zebra": i24.zebra(),
+        "beam_params": i24.beam_params(),
     }
     return devices
 
@@ -146,10 +148,13 @@ def get_rotation_scan_plan(params: RotationScanParameters):
     Args:
         params: dict obtained by reading a json file conforming to the pydantic \
             schema in ./src/jungfrau_commissioning/utils/params.py.
-            see "example_params.json" for an example.
-        subscriptions: list of callback functions to attach - probably just \
-            [nexus_writer_callback]"""
+            see "example_params.json" for an example."""
     devices = create_rotation_scan_devices()
+
+    x, y, z = yield from get_x_y_z(devices["gonio"])
+    transmission, wavelength, energy, intensity = yield from get_beam_parameters(
+        devices["beam_params"]
+    )
 
     def rotation_scan_plan_with_stage_and_cleanup(
         params: RotationScanParameters,
@@ -159,6 +164,8 @@ def get_rotation_scan_plan(params: RotationScanParameters):
             md={
                 "subplan_name": "rotation_scan_with_cleanup",
                 "rotation_scan_params": params.json(),
+                "position": (x, y, z),
+                "beam_params": (transmission, wavelength, energy, intensity),
             }
         )
         @bpp.finalize_decorator(lambda: cleanup_plan(devices["zebra"]))

@@ -52,7 +52,6 @@ def create_detector_parameters(params: RotationScanParameters) -> Detector:
 def create_I24_VGonio_axes(
     params: RotationScanParameters,
     scan_points: dict,
-    x_y_z_increments: tuple[float, float, float] = (0.0, 0.0, 0.0),
 ):
     gonio_axes = [
         Axis("omega", ".", "rotation", (-1.0, 0.0, 0.0), params.omega_start_deg),
@@ -61,27 +60,22 @@ def create_I24_VGonio_axes(
             depends="omega",
             transformation_type="translation",
             vector=(0.0, 0.0, 1.0),
-            start_pos=0.0,
-            increment=x_y_z_increments[2],
+            start_pos=params.z,
         ),
         Axis(
             name="sam_y",
             depends="sam_z",
             transformation_type="translation",
             vector=(0.0, 1.0, 0.0),
-            start_pos=0.0,
-            increment=x_y_z_increments[1],
+            start_pos=params.y,
         ),
         Axis(
             name="sam_x",
             depends="sam_y",
             transformation_type="translation",
             vector=(1.0, 0.0, 0.0),
-            start_pos=0.0,
-            increment=x_y_z_increments[0],
+            start_pos=params.x,
         ),
-        Axis("chi", "sam_x", "rotation", (0.006, -0.0264, 0.9996), 0.0),
-        Axis("phi", "chi", "rotation", (-1, -0.0025, -0.0056), 0.0),
     ]
     return Goniometer(gonio_axes, scan_points)
 
