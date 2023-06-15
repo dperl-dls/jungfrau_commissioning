@@ -22,6 +22,8 @@ class RotationScanParameters(BaseModel):
     rotation_direction: RotationDirection = RotationDirection.NEGATIVE
     offset_deg: float = 1.0
     shutter_opening_time_s: float = 0.6
+    storage_directory: str = "/tmp/jungfrau_data/"
+    nexus_filename: str = "scan"
 
     class Config:
         json_encoders = {

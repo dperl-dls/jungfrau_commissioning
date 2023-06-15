@@ -155,7 +155,12 @@ def get_rotation_scan_plan(params: RotationScanParameters):
         params: RotationScanParameters,
     ):
         @bpp.set_run_key_decorator("rotation_scan_with_cleanup")
-        @bpp.run_decorator(md={"subplan_name": "rotation_scan_with_cleanup"})
+        @bpp.run_decorator(
+            md={
+                "subplan_name": "rotation_scan_with_cleanup",
+                "rotation_scan_params": params.json(),
+            }
+        )
         @bpp.finalize_decorator(lambda: cleanup_plan(devices["zebra"]))
         def rotation_with_cleanup_and_stage(params):
             yield from rotation_scan_plan(params, **devices)

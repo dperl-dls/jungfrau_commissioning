@@ -5,6 +5,12 @@
 		},
 		{
 			"path": "../../dodal"
+		},
+		{
+			"path": "../../python-artemis"
+		},
+		{
+			"path": "../../nexgen"
 		}
 	],
 	"settings": {
