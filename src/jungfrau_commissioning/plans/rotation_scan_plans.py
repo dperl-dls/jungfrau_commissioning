@@ -97,7 +97,7 @@ def rotation_scan_plan(
 
     LOGGER.info("setting up jungfrau")
     yield from setup_detector(
-        jungfrau, params.exposure_time_s, params.detector_acquire_time_us, wait=True
+        jungfrau, params.exposure_time_s, params.acquire_time_s, wait=True
     )
 
     LOGGER.info(f"moving omega to beginning, start_angle={start_angle}")

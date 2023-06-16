@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from dodal.devices.motors import XYZLimitBundle
 from dodal.devices.zebra import RotationDirection
@@ -15,10 +16,10 @@ class RotationScanParameters(BaseModel):
     image_width_deg: float = 0.1
     omega_start_deg: float = 0.0
     exposure_time_s: float = 0.01
-    detector_acquire_time_us: float = 10.0
-    x: float = 0.0
-    y: float = 0.0
-    z: float = 0.0
+    acquire_time_s: float = 10.0
+    x: float | None = None
+    y: float | None = None
+    z: float | None = None
     rotation_direction: RotationDirection = RotationDirection.NEGATIVE
     offset_deg: float = 1.0
     shutter_opening_time_s: float = 0.6
@@ -33,6 +34,12 @@ class RotationScanParameters(BaseModel):
     @validator("rotation_direction", pre=True)
     def _parse_direction(cls, rotation_direction: str | int):
         return RotationDirection[rotation_direction]
+
+    @validator("acquire_time_s", pre=True)
+    def _validate_acquision(cls, acquire_time_s: float, values: dict[str, Any]):
+        if acquire_time_s < values["exposure_time_s"]:
+            raise ValueError("Acquisition time must not be shorter than exposure time!")
+        return acquire_time_s
 
     @classmethod
     def from_file(cls, filename: str):
