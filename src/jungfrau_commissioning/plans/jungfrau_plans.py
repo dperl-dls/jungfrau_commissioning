@@ -28,6 +28,7 @@ def setup_detector(
     )
     yield from bps.abs_set(
         jungfrau.frame_count,
+        n_images,
         group=group,
     )
     if wait:
@@ -38,4 +39,4 @@ def check_and_clear_errors(jungfrau: JungfrauM1):
     LOGGER.info("Checking and clearing errors")
     err: str = bps.rd(jungfrau.error_rbv)
     LOGGER.info(f"    reporting error: {err}")
-    yield from bps.abs_set(jungfrau.ClearError, 1, wait=True)
+    yield from bps.abs_set(jungfrau.clear_error, 1, wait=True)

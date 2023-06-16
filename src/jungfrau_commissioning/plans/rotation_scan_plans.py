@@ -158,7 +158,7 @@ def get_rotation_scan_plan(params: RotationScanParameters):
 
     x, y, z = get_x_y_z(devices["gonio"])
     transmission, wavelength, energy, intensity = get_beam_parameters(
-        devices["beam_params"]
+        devices.pop("beam_params")
     )
     nexus_writing_callback = NexusFileHandlerCallback()
 

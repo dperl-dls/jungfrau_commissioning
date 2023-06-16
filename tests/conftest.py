@@ -41,11 +41,15 @@ def fake_zebra() -> Zebra:
 
     def arm_fail_disarm_side_effect(_):
         zebra.pc.armed.set(1)
-        return Status(done=True, success=True)
+        result = Status()
+        result.set_finished()
+        return result
 
     def disarm_fail_arm_side_effect(_):
         zebra.pc.armed.set(0)
-        return Status(done=True, success=True)
+        result = Status()
+        result.set_finished()
+        return result
 
     mock_arm_fail_disarm = MagicMock(side_effect=arm_fail_disarm_side_effect)
     mock_disarm_fail_arm = MagicMock(side_effect=disarm_fail_arm_side_effect)

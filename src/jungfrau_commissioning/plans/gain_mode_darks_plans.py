@@ -29,9 +29,10 @@ def set_gain_mode(
         LOGGER.warn(f"JF reporting error: {err}")
 
 
-def do_dark_acquisition(jungfrau: JungfrauM1, exp_time_s, acq_time_us, n_frames):
+def do_dark_acquisition(jungfrau: JungfrauM1, exp_time_s, acq_time_s, n_frames):
     LOGGER.info("Setting up detector:")
-    yield from setup_detector(jungfrau, exp_time_s, acq_time_us, n_frames, wait=True)
+    # TODO SOMETHING WITH ZEBRA GOES HERE
+    yield from setup_detector(jungfrau, exp_time_s, acq_time_s, n_frames, wait=True)
     yield from abs_set(jungfrau.acquire_start, 1)
     yield from sleep(exp_time_s * n_frames)
 
@@ -61,7 +62,7 @@ def do_darks(
         jungfrau.file_directory,
         (directory_prefix / "G1").as_posix(),
     )
-    yield from do_dark_acquisition(jungfrau, 0.001, 0.0001, 1000)
+    yield from do_dark_acquisition(jungfrau, 0.001, 0.01, 1000)
 
     # Gain 2
     yield from set_gain_mode(
@@ -71,4 +72,4 @@ def do_darks(
         jungfrau.file_directory,
         (directory_prefix / "G2").as_posix(),
     )
-    yield from do_dark_acquisition(jungfrau, 0.001, 0.001, 1000)
+    yield from do_dark_acquisition(jungfrau, 0.001, 0.01, 1000)
