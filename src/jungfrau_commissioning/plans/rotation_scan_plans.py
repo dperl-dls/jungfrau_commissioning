@@ -9,6 +9,7 @@ from dodal.devices.zebra import RotationDirection, Zebra
 from ophyd.device import Device
 from ophyd.epics_motor import EpicsMotor
 
+from jungfrau_commissioning.callbacks.nexus_writer import NexusFileHandlerCallback
 from jungfrau_commissioning.plans.jungfrau_plans import setup_detector
 from jungfrau_commissioning.plans.utility_plans import get_beam_parameters, get_x_y_z
 from jungfrau_commissioning.plans.zebra_plans import (
@@ -24,7 +25,7 @@ def create_rotation_scan_devices() -> dict[str, Device]:
     """Ensures necessary devices have been instantiated and returns a dict with
     references to them"""
     devices = {
-        "eiger": i24.jungfrau(),
+        "jungfrau": i24.jungfrau(),
         "gonio": i24.vgonio(),
         "zebra": i24.zebra(),
         "beam_params": i24.beam_params(),
@@ -97,7 +98,11 @@ def rotation_scan_plan(
 
     LOGGER.info("setting up jungfrau")
     yield from setup_detector(
-        jungfrau, params.exposure_time_s, params.acquire_time_s, wait=True
+        jungfrau,
+        params.exposure_time_s,
+        params.acquire_time_s,
+        params.get_num_images(),
+        wait=True,
     )
 
     LOGGER.info(f"moving omega to beginning, start_angle={start_angle}")
@@ -151,14 +156,16 @@ def get_rotation_scan_plan(params: RotationScanParameters):
             see "example_params.json" for an example."""
     devices = create_rotation_scan_devices()
 
-    x, y, z = yield from get_x_y_z(devices["gonio"])
-    transmission, wavelength, energy, intensity = yield from get_beam_parameters(
+    x, y, z = get_x_y_z(devices["gonio"])
+    transmission, wavelength, energy, intensity = get_beam_parameters(
         devices["beam_params"]
     )
+    nexus_writing_callback = NexusFileHandlerCallback()
 
     def rotation_scan_plan_with_stage_and_cleanup(
         params: RotationScanParameters,
     ):
+        @bpp.subs_decorator([nexus_writing_callback])
         @bpp.set_run_key_decorator("rotation_scan_with_cleanup")
         @bpp.run_decorator(
             md={
