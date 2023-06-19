@@ -29,11 +29,23 @@ def set_gain_mode(
         LOGGER.warn(f"JF reporting error: {err}")
 
 
-def do_dark_acquisition(jungfrau: JungfrauM1, exp_time_s, acq_time_s, n_frames):
+def do_dark_acquisition(
+    jungfrau: JungfrauM1, exp_time_s, acq_time_s, n_frames, timeout_s: float = 3
+):
     LOGGER.info("Setting up detector:")
     yield from setup_detector(jungfrau, exp_time_s, acq_time_s, n_frames, wait=True)
     yield from abs_set(jungfrau.acquire_start, 1)
-    yield from sleep(exp_time_s * n_frames)
+    timeout = exp_time_s * n_frames + timeout_s
+    time = 0.0
+    still_writing = 1
+    while time < timeout and still_writing:
+        still_writing = yield from rd(jungfrau.acquire_rbv)
+        yield from sleep(0.1)
+        time += 0.1
+    if still_writing:
+        raise TimeoutError(
+            f"Acquire did not finish in {exp_time_s * n_frames + timeout} s"
+        )
 
 
 def do_darks(
@@ -48,8 +60,7 @@ def do_darks(
         jungfrau, GainMode.dynamic, check_for_errors=check_for_errors
     )
     yield from abs_set(
-        jungfrau.file_directory,
-        (directory_prefix / "G0").as_posix(),
+        jungfrau.file_directory, (directory_prefix / "G0").as_posix(), wait=True
     )
     yield from do_dark_acquisition(jungfrau, 0.001, 0.001, 1000)
 
@@ -58,8 +69,7 @@ def do_darks(
         jungfrau, GainMode.forceswitchg1, check_for_errors=check_for_errors
     )
     yield from abs_set(
-        jungfrau.file_directory,
-        (directory_prefix / "G1").as_posix(),
+        jungfrau.file_directory, (directory_prefix / "G1").as_posix(), wait=True
     )
     yield from do_dark_acquisition(jungfrau, 0.001, 0.01, 1000)
 
@@ -68,7 +78,6 @@ def do_darks(
         jungfrau, GainMode.forceswitchg2, check_for_errors=check_for_errors
     )
     yield from abs_set(
-        jungfrau.file_directory,
-        (directory_prefix / "G2").as_posix(),
+        jungfrau.file_directory, (directory_prefix / "G2").as_posix(), wait=True
     )
     yield from do_dark_acquisition(jungfrau, 0.001, 0.01, 1000)
