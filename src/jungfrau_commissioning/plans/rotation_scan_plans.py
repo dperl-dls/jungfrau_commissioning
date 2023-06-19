@@ -65,7 +65,7 @@ def move_to_end_w_buffer(
     offset: float = OFFSET,
     direction: RotationDirection = DIRECTION,
 ):
-    distance_to_move = (scan_width + 0.1 + offset) * direction
+    distance_to_move = (scan_width + 0.5 + offset) * direction
     LOGGER.info(
         f"Given scan width of {scan_width}, offset of {offset}, direction"
         f" {direction}, apply a relative set to omega of: {distance_to_move}"
