@@ -90,6 +90,8 @@ def setup_zebra_for_rotation(
     yield from bps.abs_set(zebra.pc.gate_width, scan_width, group=group)
     # Set gate position to be angle of interest
     yield from bps.abs_set(zebra.pc.gate_trigger, axis.value, group=group)
+    # Set pulse width lower than exposure time
+    yield from bps.abs_set(zebra.pc.pulse_width, 0.0005, group=group)
     # Trigger the shutter with the gate (from PC_GATE & SOFTIN1 -> OR1)
     yield from bps.abs_set(zebra.output.out_pvs[TTL_SHUTTER], OR1, group=group)
     # Trigger the detector with a pulse
