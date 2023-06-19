@@ -26,11 +26,15 @@ def set_gain_mode(
     yield from abs_set(jungfrau.gain_mode, gain_mode.value, wait=wait)
     if check_for_errors:
         err: str = rd(jungfrau.error_rbv)
-        LOGGER.warn(f"JF reporting error: {err}")
+        LOGGER.warning(f"JF reporting error: {err}")
 
 
 def do_dark_acquisition(
-    jungfrau: JungfrauM1, exp_time_s, acq_time_s, n_frames, timeout_s: float = 3
+    jungfrau: JungfrauM1,
+    exp_time_s: float,
+    acq_time_s: float,
+    n_frames: int,
+    timeout_s: float = 3,
 ):
     LOGGER.info("Setting up detector:")
     yield from setup_detector(jungfrau, exp_time_s, acq_time_s, n_frames, wait=True)
