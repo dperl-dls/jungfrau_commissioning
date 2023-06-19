@@ -133,6 +133,11 @@ class NexusFileHandlerCallback(CallbackBase):
     """
 
     nexus_writer: JFRotationNexusWriter
+    descriptors: dict[str, dict] = {}
+    parameters: RotationScanParameters
+    wavelength: float | None = None
+    flux: float | None = None
+    transmission: float | None = None
 
     def start(self, doc: dict):
         if doc.get("subplan_name") == "rotation_scan_with_cleanup":
@@ -144,13 +149,47 @@ class NexusFileHandlerCallback(CallbackBase):
             self.parameters = RotationScanParameters(**json_params)
             self.run_start_uid = doc.get("uid")
 
+    def descriptor(self, doc: dict):
+        self.descriptors[doc["uid"]] = doc
+
+    def event(self, doc: dict):
+        LOGGER.info("Nexus handler received event document.")
+        event_descriptor = self.descriptors[doc["descriptor"]]
+
+        if event_descriptor.get("name") == "gonio xyz":
+            assert self.parameters is not None
+            data: dict | None = doc.get("data")
+            assert data is not None
+            self.parameters.x = data.get("vgonio_x")
+            self.parameters.y = data.get("vgonio_yh")
+            self.parameters.z = data.get("vgonio_z")
+            LOGGER.info(
+                f"Nexus handler received x, y, z: {self.parameters.x ,self.parameters.y ,self.parameters.z}."  # noqa
+            )
+        if event_descriptor.get("name") == "beam params":
+            assert self.parameters is not None
+            data = doc.get("data")
+            assert data is not None
+            self.transmission = data.get("beam_params_transmission")
+            self.flux = data.get("beam_params_flux")
+            self.wavelength = data.get("beam_params_wavelength")
+            LOGGER.info(
+                f"Nexus handler received beam parameters, transmission: {self.transmission}, flux: {self.flux}, wavelength: {self.wavelength}."  # noqa
+            )
+
     def stop(self, doc: dict):
         if (
             self.run_start_uid is not None
             and doc.get("run_start") == self.run_start_uid
         ):
-            LOGGER.info("Updating Nexus file timestamps.")
-            assert (
-                self.nexus_writer is not None
-            ), "Failed to update Nexus file timestamp, writer was not initialised."
-            self.nexus_writer.update_nexus_file_timestamp()
+            assert self.parameters.x is not None
+            assert self.parameters.y is not None
+            assert self.parameters.z is not None
+            assert self.transmission is not None
+            assert self.flux is not None
+            assert self.wavelength is not None
+            LOGGER.info("writing nexus file")
+            nexus_writer = JFRotationNexusWriter(
+                self.parameters, self.wavelength, self.flux, self.transmission
+            )
+            nexus_writer.create_nexus_file()

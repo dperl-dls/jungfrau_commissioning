@@ -29,10 +29,32 @@ def test_rotation_scan_plan_nexus_callback(
 
     callback_instance: MagicMock = nexus_callback.return_value
     callback_calls = callback_instance.call_args_list
-    assert len(callback_calls) == 4
+    assert len(callback_calls) == 8
     call_1 = callback_calls[0]
     assert call_1.args[0] == "start"
     assert call_1.args[1]["subplan_name"] == "rotation_scan_with_cleanup"
     assert "rotation_scan_params" in call_1.args[1]
     assert "position" in call_1.args[1]
     assert "beam_params" in call_1.args[1]
+
+
+@patch(
+    "bluesky.plan_stubs.wait",
+)
+@patch(
+    "jungfrau_commissioning.callbacks.nexus_callback.JFRotationNexusWriter",
+)
+def test_rotation_scan_plan_nexus_callback_gets_readings(
+    nexus_writer: MagicMock,
+    bps_wait: MagicMock,
+    fake_create_devices_function,
+    RE: RunEngine,
+):
+    minimal_params = RotationScanParameters.from_file("example_params.json")
+    with patch(
+        "jungfrau_commissioning.plans.rotation_scan_plans.create_rotation_scan_devices",
+        fake_create_devices_function,
+    ):
+        plan = get_rotation_scan_plan(minimal_params)
+
+    RE(plan)

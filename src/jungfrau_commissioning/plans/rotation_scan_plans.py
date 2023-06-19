@@ -4,6 +4,7 @@ import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
 from dodal.beamlines import i24
 from dodal.devices.i24.jungfrau import JungfrauM1
+from dodal.devices.i24.read_only_attenuator import ReadOnlyEnergyAndAttenuator
 from dodal.devices.i24.vgonio import VGonio
 from dodal.devices.zebra import RotationDirection, Zebra
 from ophyd.device import Device
@@ -11,7 +12,12 @@ from ophyd.epics_motor import EpicsMotor
 
 from jungfrau_commissioning.callbacks.nexus_writer import NexusFileHandlerCallback
 from jungfrau_commissioning.plans.jungfrau_plans import setup_detector
-from jungfrau_commissioning.plans.utility_plans import get_beam_parameters, get_x_y_z
+from jungfrau_commissioning.plans.utility_plans import (
+    rd_beam_parameters,
+    rd_x_y_z,
+    read_beam_parameters,
+    read_x_y_z,
+)
 from jungfrau_commissioning.plans.zebra_plans import (
     arm_zebra,
     disarm_zebra,
@@ -87,6 +93,7 @@ def rotation_scan_plan(
     jungfrau: JungfrauM1,
     gonio: VGonio,
     zebra: Zebra,
+    beam_params: ReadOnlyEnergyAndAttenuator,
 ):
     """A plan to collect diffraction images from a sample continuously rotating about
     a fixed axis - for now this axis is limited to omega."""
@@ -104,6 +111,10 @@ def rotation_scan_plan(
         params.get_num_images(),
         wait=True,
     )
+
+    LOGGER.info("reading current x, y, z and beam parameters")
+    yield from read_x_y_z(gonio)
+    yield from read_beam_parameters(beam_params)
 
     LOGGER.info(f"moving omega to beginning, start_angle={start_angle}")
     yield from move_to_start_w_buffer(gonio.omega, start_angle)
@@ -156,10 +167,12 @@ def get_rotation_scan_plan(params: RotationScanParameters):
             see "example_params.json" for an example."""
     devices = create_rotation_scan_devices()
 
-    x, y, z = get_x_y_z(devices["gonio"])
-    transmission, wavelength, energy, intensity = get_beam_parameters(
-        devices.pop("beam_params")
+    # not sure if this works?
+    x, y, z = rd_x_y_z(devices["gonio"])
+    transmission, wavelength, energy, intensity = rd_beam_parameters(
+        devices["beam_params"]
     )
+
     nexus_writing_callback = NexusFileHandlerCallback()
 
     def rotation_scan_plan_with_stage_and_cleanup(
