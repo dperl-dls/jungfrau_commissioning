@@ -92,6 +92,10 @@ def hlp(arg: Callable | None = None):
     if arg is None:
         print(welcome_message)
     else:
+        sq = "'"
+        print(
+            f"{col.CYAN}{arg.__name__}({col.GREEN}{str(signature(arg)).replace(sq,'')[1:-1]}{col.CYAN}){col.ENDC}"  # noqa
+        )
         print(inspect.getdoc(arg))
 
 

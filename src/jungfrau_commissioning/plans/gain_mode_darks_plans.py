@@ -24,9 +24,9 @@ def set_gain_mode(
 ):
     LOGGER.info(f"Setting gain mode {gain_mode.value}")
     yield from abs_set(jungfrau.gain_mode, gain_mode.value, wait=wait)
-    if check_for_errors:
-        err: str = rd(jungfrau.error_rbv)
-        LOGGER.warning(f"JF reporting error: {err}")
+    # if check_for_errors:
+    #     err: str = rd(jungfrau.error_rbv) TODO: figure out why rd is giving msg
+    #     LOGGER.warning(f"JF reporting error: {err}")
 
 
 def do_dark_acquisition(
@@ -39,17 +39,18 @@ def do_dark_acquisition(
     LOGGER.info("Setting up detector:")
     yield from setup_detector(jungfrau, exp_time_s, acq_time_s, n_frames, wait=True)
     yield from abs_set(jungfrau.acquire_start, 1)
-    timeout = exp_time_s * n_frames + timeout_s
-    time = 0.0
-    still_writing = 1
-    while time < timeout and still_writing:
-        still_writing = yield from rd(jungfrau.acquire_rbv)
-        yield from sleep(0.1)
-        time += 0.1
-    if still_writing:
-        raise TimeoutError(
-            f"Acquire did not finish in {exp_time_s * n_frames + timeout} s"
-        )
+    # timeout = exp_time_s * n_frames + timeout_s
+    # time = 0.0
+    # still_writing = 1
+    # while time < timeout and still_writing:
+    #     still_writing = yield from rd(jungfrau.writing_rbv)
+    #     yield from sleep(0.1)
+    #     time += 0.1
+    # if still_writing:
+    #     raise TimeoutError(
+    #         f"Acquire did not finish in {exp_time_s * n_frames + timeout} s"
+    #     )
+    yield from sleep(5)
 
 
 def do_darks(
@@ -59,29 +60,26 @@ def do_darks(
 ):
     directory_prefix = Path(directory) / f"{date_time_string()}_darks"
 
+    # TODO CHECK IF FILES EXIST
+
     # Gain 0
     yield from set_gain_mode(
         jungfrau, GainMode.dynamic, check_for_errors=check_for_errors
     )
-    yield from abs_set(
-        jungfrau.file_directory, (directory_prefix / "G0").as_posix(), wait=True
-    )
+    yield from abs_set(jungfrau.file_directory, directory_prefix.as_posix(), wait=True)
+    yield from abs_set(jungfrau.file_name, "G0", wait=True)
     yield from do_dark_acquisition(jungfrau, 0.001, 0.001, 1000)
 
     # Gain 1
     yield from set_gain_mode(
         jungfrau, GainMode.forceswitchg1, check_for_errors=check_for_errors
     )
-    yield from abs_set(
-        jungfrau.file_directory, (directory_prefix / "G1").as_posix(), wait=True
-    )
+    yield from abs_set(jungfrau.file_name, "G1", wait=True)
     yield from do_dark_acquisition(jungfrau, 0.001, 0.01, 1000)
 
     # Gain 2
     yield from set_gain_mode(
         jungfrau, GainMode.forceswitchg2, check_for_errors=check_for_errors
     )
-    yield from abs_set(
-        jungfrau.file_directory, (directory_prefix / "G2").as_posix(), wait=True
-    )
+    yield from abs_set(jungfrau.file_name, "G2", wait=True)
     yield from do_dark_acquisition(jungfrau, 0.001, 0.01, 1000)
