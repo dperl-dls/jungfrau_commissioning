@@ -6,7 +6,6 @@ from dodal.devices.zebra import (
     PC_PULSE,
     PC_PULSE_SOURCE_POSITION,
     TTL_DETECTOR,
-    TTL_SHUTTER,
     TTL_XSPRESS3,
     I24Axes,
     RotationDirection,
@@ -14,6 +13,8 @@ from dodal.devices.zebra import (
 )
 
 from jungfrau_commissioning.utils.log import LOGGER
+
+TTL_SHUTTER = 4
 
 
 def arm_zebra(zebra: Zebra, timeout: float = 3):
