@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from artemis.external_interaction.nexus.write_nexus import NexusWriter
@@ -146,7 +147,7 @@ class NexusFileHandlerCallback(CallbackBase):
             )
             json_params = doc.get("rotation_scan_params")
             assert json_params is not None
-            self.parameters = RotationScanParameters(**json_params)
+            self.parameters = RotationScanParameters(**json.loads(json_params))
             self.run_start_uid = doc.get("uid")
 
     def descriptor(self, doc: dict):
@@ -171,7 +172,7 @@ class NexusFileHandlerCallback(CallbackBase):
             data = doc.get("data")
             assert data is not None
             self.transmission = data.get("beam_params_transmission")
-            self.flux = data.get("beam_params_flux")
+            self.flux = data.get("beam_params_intensity")
             self.wavelength = data.get("beam_params_wavelength")
             LOGGER.info(
                 f"Nexus handler received beam parameters, transmission: {self.transmission}, flux: {self.flux}, wavelength: {self.wavelength}."  # noqa

@@ -33,7 +33,10 @@ class RotationScanParameters(BaseModel):
 
     @validator("rotation_direction", pre=True)
     def _parse_direction(cls, rotation_direction: str | int):
-        return RotationDirection[rotation_direction]
+        if isinstance(rotation_direction, str):
+            return RotationDirection[rotation_direction]
+        else:
+            return RotationDirection(rotation_direction)
 
     @validator("acquire_time_s", pre=True)
     def _validate_acquision(cls, acquire_time_s: float, values: dict[str, Any]):

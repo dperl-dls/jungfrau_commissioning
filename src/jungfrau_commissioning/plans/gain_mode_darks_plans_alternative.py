@@ -4,8 +4,15 @@ from pathlib import Path
 
 from bluesky.plan_stubs import abs_set, rd, sleep
 from dodal.devices.i24.jungfrau import JungfrauM1
+from dodal.devices.i24.vgonio import VGonio
+from dodal.devices.zebra import Zebra
 
 from jungfrau_commissioning.plans.jungfrau_plans import setup_detector
+from jungfrau_commissioning.plans.zebra_plans import (
+    arm_zebra,
+    disarm_zebra,
+    setup_zebra_for_darks,
+)
 from jungfrau_commissioning.utils.log import LOGGER
 
 
@@ -29,15 +36,25 @@ def set_gain_mode(
         LOGGER.warn(f"JF reporting error: {err}")
 
 
-def do_dark_acquisition(jungfrau: JungfrauM1, exp_time_s, acq_time_s, n_frames):
-    LOGGER.info("Setting up detector:")
+def do_dark_acquisition(
+    jungfrau: JungfrauM1, zebra: Zebra, gonio: VGonio, exp_time_s, acq_time_s, n_frames
+):
+    LOGGER.info("Setting up detector")
     yield from setup_detector(jungfrau, exp_time_s, acq_time_s, n_frames, wait=True)
+    yield from abs_set(VGonio.omega, 0, wait=True)
+    LOGGER.info("Setting up and arming zebra")
+    yield from setup_zebra_for_darks(zebra, wait=True)
+    yield from abs_set(arm_zebra(zebra), wait=True)
+    LOGGER.info("Triggering collection")
+    yield from abs_set(VGonio.omega, 1, wait=True)
     yield from abs_set(jungfrau.acquire_start, 1)
     yield from sleep(exp_time_s * n_frames)
 
 
 def do_darks(
     jungfrau: JungfrauM1,
+    zebra: Zebra,
+    gonio: VGonio,
     directory: str = "/tmp/",
     check_for_errors=True,
 ):
@@ -51,7 +68,7 @@ def do_darks(
         jungfrau.file_directory,
         (directory_prefix / "G0").as_posix(),
     )
-    yield from do_dark_acquisition(jungfrau, 0.001, 0.001, 1000)
+    yield from do_dark_acquisition(jungfrau, zebra, gonio, 0.001, 0.001, 1000)
 
     # Gain 1
     yield from set_gain_mode(
@@ -61,7 +78,7 @@ def do_darks(
         jungfrau.file_directory,
         (directory_prefix / "G1").as_posix(),
     )
-    yield from do_dark_acquisition(jungfrau, 0.001, 0.01, 1000)
+    yield from do_dark_acquisition(jungfrau, zebra, gonio, 0.001, 0.01, 1000)
 
     # Gain 2
     yield from set_gain_mode(
@@ -71,4 +88,4 @@ def do_darks(
         jungfrau.file_directory,
         (directory_prefix / "G2").as_posix(),
     )
-    yield from do_dark_acquisition(jungfrau, 0.001, 0.01, 1000)
+    yield from do_dark_acquisition(jungfrau, zebra, gonio, 0.001, 0.01, 1000)
