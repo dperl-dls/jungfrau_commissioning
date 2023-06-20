@@ -5,7 +5,11 @@ from pathlib import Path
 from bluesky.plan_stubs import abs_set, rd, sleep
 from dodal.devices.i24.jungfrau import JungfrauM1
 
-from jungfrau_commissioning.plans.jungfrau_plans import setup_detector
+from jungfrau_commissioning.plans.jungfrau_plans import (
+    check_and_clear_errors,
+    set_software_trigger,
+    setup_detector,
+)
 from jungfrau_commissioning.utils.log import LOGGER
 
 
@@ -37,9 +41,7 @@ def set_gain_mode(
     if time > timeout_s:
         raise TimeoutError(f"Gain mode change unsuccessful in {timeout_s} seconds")
     if check_for_errors:
-        err: str = yield from rd(jungfrau.error_rbv)
-        if err != "":
-            LOGGER.warning(f"JF reporting error: {err}")
+        yield from check_and_clear_errors(jungfrau)
 
 
 def do_dark_acquisition(
@@ -68,12 +70,14 @@ def do_dark_acquisition(
 
 def do_darks(
     jungfrau: JungfrauM1,
-    directory: str = "/tmp/",
+    directory: str = "/dls/i24/data/2023/cm33852-3/jungfrau_commissioning",
     check_for_errors=True,
 ):
     directory_prefix = Path(directory) / f"{date_time_string()}_darks"
 
     # TODO CHECK IF FILES EXIST
+
+    yield from set_software_trigger(jungfrau)
 
     # Gain 0
     yield from set_gain_mode(
@@ -96,3 +100,8 @@ def do_darks(
     )
     yield from abs_set(jungfrau.file_name, "G2", wait=True)
     yield from do_dark_acquisition(jungfrau, 0.001, 0.01, 1000)
+
+    # Leave on dynamic after finishing
+    yield from set_gain_mode(
+        jungfrau, GainMode.dynamic, check_for_errors=check_for_errors
+    )

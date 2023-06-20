@@ -18,7 +18,10 @@ from jungfrau_commissioning.plans.gain_mode_darks_plans import (
     date_time_string,
     set_gain_mode,
 )
-from jungfrau_commissioning.plans.jungfrau_plans import setup_detector
+from jungfrau_commissioning.plans.jungfrau_plans import (
+    set_hardware_trigger,
+    setup_detector,
+)
 from jungfrau_commissioning.plans.utility_plans import (
     rd_beam_parameters,
     rd_x_y_z,
@@ -101,7 +104,9 @@ def rotation_scan_plan(
     gonio: VGonio,
     zebra: Zebra,
     beam_params: ReadOnlyEnergyAndAttenuator,
-    directory: str = "/dls/i24/data/2023/cm33852-3/jungfrau_commissioning",
+    directory: Path = Path(
+        "/dls/i24/data/2023/cm33852-3/jungfrau_commissioning",
+    ),
 ):
     """A plan to collect diffraction images from a sample continuously rotating about
     a fixed axis - for now this axis is limited to omega."""
@@ -111,11 +116,10 @@ def rotation_scan_plan(
     image_width = params.image_width_deg
     exposure_time = params.exposure_time_s
 
-    params.nexus_filename = (
-        f"scan_{scan_width}deg_scan_{image_width}_deg_imgs_{exposure_time}_s_exps"
-    )
-
     LOGGER.info("setting up jungfrau")
+
+    yield from set_hardware_trigger(jungfrau)
+    yield from bps.abs_set(jungfrau.trigger_count, 1)
     yield from setup_detector(
         jungfrau,
         params.exposure_time_s,
@@ -125,10 +129,7 @@ def rotation_scan_plan(
     )
 
     yield from set_gain_mode(jungfrau, GainMode.dynamic)
-    directory_prefix = Path(directory) / f"{date_time_string()}_rotation"
-    yield from bps.abs_set(
-        jungfrau.file_directory, directory_prefix.as_posix(), wait=True
-    )
+    yield from bps.abs_set(jungfrau.file_directory, directory.as_posix(), wait=True)
     yield from bps.abs_set(jungfrau.file_name, params.nexus_filename, wait=True)
 
     LOGGER.info("reading current x, y, z and beam parameters")
@@ -186,6 +187,8 @@ def get_rotation_scan_plan(params: RotationScanParameters):
             see "example_params.json" for an example."""
     devices = create_rotation_scan_devices()
 
+    params.nexus_filename = f"scan_{params.scan_width_deg}deg_scan_{params.image_width_deg}_deg_imgs_{params.exposure_time_s}_s_exps"  # noqa
+    directory = Path(params.storage_directory) / f"{date_time_string()}_rotation"
     # not sure if this works?
     x, y, z = rd_x_y_z(devices["gonio"])
     transmission, wavelength, energy, intensity = rd_beam_parameters(
@@ -209,7 +212,7 @@ def get_rotation_scan_plan(params: RotationScanParameters):
         )
         @bpp.finalize_decorator(lambda: cleanup_plan(devices["zebra"]))
         def rotation_with_cleanup_and_stage(params):
-            yield from rotation_scan_plan(params, **devices)
+            yield from rotation_scan_plan(params, **devices, directory=directory)
 
         yield from rotation_with_cleanup_and_stage(params)
 

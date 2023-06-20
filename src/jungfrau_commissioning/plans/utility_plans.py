@@ -31,7 +31,9 @@ def rd_beam_parameters(ro_energ_atten: ReadOnlyEnergyAndAttenuator):
     wavelength = yield from bps.rd(ro_energ_atten.wavelength)
     energy = yield from bps.rd(ro_energ_atten.energy)
     intensity = yield from bps.rd(ro_energ_atten.intensity)
-    LOGGER.info(f"Read current x, yh, z: {(transmission,wavelength,energy,intensity,)}")
+    LOGGER.info(
+        f"Read current tranmission, wavelength, energy, attenuation: {(transmission,wavelength,energy,intensity,)}"  # noqa
+    )
     return (
         transmission,
         wavelength,

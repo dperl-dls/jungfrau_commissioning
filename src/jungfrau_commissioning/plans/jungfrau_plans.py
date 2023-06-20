@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 import bluesky.plan_stubs as bps
-from dodal.devices.i24.jungfrau import JungfrauM1
+from dodal.devices.i24.jungfrau import JungfrauM1, TriggerMode
 
 from jungfrau_commissioning.utils.log import LOGGER
+
+
+def set_hardware_trigger(jungfrau: JungfrauM1):
+    yield from bps.abs_set(jungfrau.trigger_mode, TriggerMode.HARDWARE)
+
+
+def set_software_trigger(jungfrau: JungfrauM1):
+    yield from bps.abs_set(jungfrau.trigger_mode, TriggerMode.SOFTWARE)
 
 
 def setup_detector(
@@ -36,7 +44,8 @@ def setup_detector(
 
 
 def check_and_clear_errors(jungfrau: JungfrauM1):
-    LOGGER.info("Checking and clearing errors")
-    err: str = bps.rd(jungfrau.error_rbv)
-    LOGGER.info(f"    reporting error: {err}")
+    LOGGER.info("Checking and clearing errors...")
+    err: str = yield from bps.rd(jungfrau.error_rbv)
+    if err != "":
+        LOGGER.info(f"    reporting error: {err}")
     yield from bps.abs_set(jungfrau.clear_error, 1, wait=True)
