@@ -16,17 +16,28 @@ class GainMode(str, Enum):
 
 
 def date_time_string():
-    return datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%s")
+    return datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S")
 
 
 def set_gain_mode(
-    jungfrau: JungfrauM1, gain_mode: GainMode, wait=True, check_for_errors=True
+    jungfrau: JungfrauM1,
+    gain_mode: GainMode,
+    wait=True,
+    check_for_errors=True,
+    timeout_s=3,
 ):
     LOGGER.info(f"Setting gain mode {gain_mode.value}")
     yield from abs_set(jungfrau.gain_mode, gain_mode.value, wait=wait)
-    # if check_for_errors:
-    #     err: str = rd(jungfrau.error_rbv) TODO: figure out why rd is giving msg
-    #     LOGGER.warning(f"JF reporting error: {err}")
+    time = 0.0
+    while (yield from rd(jungfrau.gain_mode)) != gain_mode.value and time < timeout_s:
+        yield from sleep(0.1)
+        time += 0.1
+    if time > timeout_s:
+        raise TimeoutError(f"Gain mode change unsuccessful in {timeout_s} seconds")
+    if check_for_errors:
+        err: str = yield from rd(jungfrau.error_rbv)
+        if err != "":
+            LOGGER.warning(f"JF reporting error: {err}")
 
 
 def do_dark_acquisition(
