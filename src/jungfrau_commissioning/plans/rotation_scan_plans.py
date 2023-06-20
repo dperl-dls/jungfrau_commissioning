@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
 from dodal.beamlines import i24
@@ -11,6 +13,11 @@ from ophyd.device import Device
 from ophyd.epics_motor import EpicsMotor
 
 from jungfrau_commissioning.callbacks.nexus_writer import NexusFileHandlerCallback
+from jungfrau_commissioning.plans.gain_mode_darks_plans import (
+    GainMode,
+    date_time_string,
+    set_gain_mode,
+)
 from jungfrau_commissioning.plans.jungfrau_plans import setup_detector
 from jungfrau_commissioning.plans.utility_plans import (
     rd_beam_parameters,
@@ -94,6 +101,7 @@ def rotation_scan_plan(
     gonio: VGonio,
     zebra: Zebra,
     beam_params: ReadOnlyEnergyAndAttenuator,
+    directory: str = "/dls/i24/data/2023/cm33852-3/jungfrau_commissioning",
 ):
     """A plan to collect diffraction images from a sample continuously rotating about
     a fixed axis - for now this axis is limited to omega."""
@@ -103,6 +111,10 @@ def rotation_scan_plan(
     image_width = params.image_width_deg
     exposure_time = params.exposure_time_s
 
+    params.nexus_filename = (
+        f"scan_{scan_width}deg_scan_{image_width}_deg_imgs_{exposure_time}_s_exps"
+    )
+
     LOGGER.info("setting up jungfrau")
     yield from setup_detector(
         jungfrau,
@@ -111,6 +123,13 @@ def rotation_scan_plan(
         params.get_num_images(),
         wait=True,
     )
+
+    yield from set_gain_mode(jungfrau, GainMode.dynamic)
+    directory_prefix = Path(directory) / f"{date_time_string()}_rotation"
+    yield from bps.abs_set(
+        jungfrau.file_directory, directory_prefix.as_posix(), wait=True
+    )
+    yield from bps.abs_set(jungfrau.file_name, params.nexus_filename, wait=True)
 
     LOGGER.info("reading current x, y, z and beam parameters")
     yield from read_x_y_z(gonio)

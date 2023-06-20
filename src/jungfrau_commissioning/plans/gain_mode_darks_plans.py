@@ -29,8 +29,10 @@ def set_gain_mode(
     LOGGER.info(f"Setting gain mode {gain_mode.value}")
     yield from abs_set(jungfrau.gain_mode, gain_mode.value, wait=wait)
     time = 0.0
-    while (yield from rd(jungfrau.gain_mode)) != gain_mode.value and time < timeout_s:
+    current_gain_mode = ""
+    while current_gain_mode != gain_mode.value and time < timeout_s:
         yield from sleep(0.1)
+        current_gain_mode = yield from rd(jungfrau.gain_mode)
         time += 0.1
     if time > timeout_s:
         raise TimeoutError(f"Gain mode change unsuccessful in {timeout_s} seconds")
@@ -50,6 +52,7 @@ def do_dark_acquisition(
     LOGGER.info("Setting up detector:")
     yield from setup_detector(jungfrau, exp_time_s, acq_time_s, n_frames, wait=True)
     yield from abs_set(jungfrau.acquire_start, 1)
+    yield from sleep(acq_time_s * n_frames + 2)
     # timeout = exp_time_s * n_frames + timeout_s
     # time = 0.0
     # still_writing = 1
@@ -61,7 +64,6 @@ def do_dark_acquisition(
     #     raise TimeoutError(
     #         f"Acquire did not finish in {exp_time_s * n_frames + timeout} s"
     #     )
-    yield from sleep(5)
 
 
 def do_darks(
