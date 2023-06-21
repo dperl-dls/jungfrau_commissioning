@@ -15,32 +15,40 @@ def set_software_trigger(jungfrau: JungfrauM1):
     yield from bps.abs_set(jungfrau.trigger_mode, TriggerMode.SOFTWARE.value)
 
 
+def wait_for_writing(jungfrau: JungfrauM1, timeout_s: float):
+    # this is currently broken
+    yield from bps.sleep(0.2)
+    LOGGER.info("waiting for acquire_RBV")
+    acquiring = 1
+    while acquiring:
+        acquiring = yield from bps.rd(jungfrau.acquire_rbv)
+        yield from bps.sleep(0.3)
+        LOGGER.info(f"{'still' if acquiring else 'stopped'} acquiring")
+    LOGGER.info("acquire_RBV low, waiting for writing_RBV")
+    time = 0.0
+    still_writing = 1
+    while time < timeout_s and still_writing:
+        still_writing = yield from bps.rd(jungfrau.writing_rbv)
+        LOGGER.info(f"{'still' if still_writing else 'stopped'} writing")
+        yield from bps.sleep(0.3)
+        time += 0.3
+    if still_writing:
+        raise TimeoutError(f"Acquire did not finish in {timeout_s} s")
+    yield from bps.sleep(0.2)
+
+
 def do_manual_acquisition(
     jungfrau: JungfrauM1,
     exp_time_s: float,
     acq_time_s: float,
     n_frames: int,
-    timeout_times: float = 5,
+    timeout_times: float = 3,
 ):
     LOGGER.info("Setting up detector:")
     yield from setup_detector(jungfrau, exp_time_s, acq_time_s, n_frames, wait=True)
-    yield from bps.abs_set(jungfrau.acquire_start, 1)
-    yield from bps.sleep(acq_time_s * n_frames * 3)
-
-    # yield from bps.sleep(0.2)
-    # while (yield from bps.rd(jungfrau.acquire_rbv)):
-    #     ...
-    # timeout = exp_time_s * n_frames * timeout_times
-    # time = 0.0
-    # still_writing = 1
-    # while time < timeout and still_writing:
-    #     still_writing = yield from bps.rd(jungfrau.writing_rbv)
-    #     yield from bps.sleep(0.1)
-    #     time += 0.1
-    # if still_writing:
-    #     raise TimeoutError(
-    #         f"Acquire did not finish in {exp_time_s * n_frames * timeout} s"
-    #     )
+    yield from bps.abs_set(jungfrau.acquire_start, 1, wait=True)
+    # yield from wait_for_writing(jungfrau, acq_time_s * n_frames * timeout_times)
+    yield from bps.sleep(acq_time_s * n_frames * timeout_times)
 
 
 def setup_detector(

@@ -179,6 +179,9 @@ def rotation_scan_plan(
         gonio.omega, scan_width, shutter_opening_degrees, offset=params.offset_deg
     )
     yield from bps.sleep(1)  # TODO See if this helps shutter closing issue
+    # yield from wait_for_writing(
+    #     jungfrau, params.acquire_time_s * params.get_num_images() * 5
+    # )
 
 
 def cleanup_plan(zebra: Zebra, group="cleanup"):
