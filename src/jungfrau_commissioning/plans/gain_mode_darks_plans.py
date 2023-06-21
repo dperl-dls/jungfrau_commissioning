@@ -48,7 +48,7 @@ def do_darks(
     jungfrau: JungfrauM1,
     directory: str = "/dls/i24/data/2023/cm33852-3/jungfrau_commissioning",
     check_for_errors=True,
-    exposure_acq_time_s=0.001,
+    exp_acq_time_s=0.001,
     focred_gain_ratio=10,
     num_images=1000,
     timeout_factor=4,
@@ -58,10 +58,10 @@ def do_darks(
     multiplied by the forced gain ratio."""
     directory_prefix = Path(directory) / f"{date_time_string()}_darks"
 
-    timeout_factor = max(4, timeout_factor * 0.001 / exposure_acq_time_s)
+    timeout_factor = max(4, timeout_factor * 0.001 / exp_acq_time_s)
 
     # TODO CHECK IF FILES EXIST
-    fg_acq_time = exposure_acq_time_s * focred_gain_ratio
+    fg_acq_time = exp_acq_time_s * focred_gain_ratio
 
     yield from set_software_trigger(jungfrau)
 
@@ -72,7 +72,7 @@ def do_darks(
     yield from abs_set(jungfrau.file_directory, directory_prefix.as_posix(), wait=True)
     yield from abs_set(jungfrau.file_name, "G0", wait=True)
     yield from do_manual_acquisition(
-        jungfrau, exposure_acq_time_s, exposure_acq_time_s, num_images, timeout_factor
+        jungfrau, exp_acq_time_s, exp_acq_time_s, num_images, timeout_factor
     )
     yield from sleep(0.3)
 
@@ -82,7 +82,7 @@ def do_darks(
     )
     yield from abs_set(jungfrau.file_name, "G1", wait=True)
     yield from do_manual_acquisition(
-        jungfrau, exposure_acq_time_s, fg_acq_time, num_images, timeout_factor
+        jungfrau, exp_acq_time_s, fg_acq_time, num_images, timeout_factor
     )
     yield from sleep(0.3)
 
@@ -92,7 +92,7 @@ def do_darks(
     )
     yield from abs_set(jungfrau.file_name, "G2", wait=True)
     yield from do_manual_acquisition(
-        jungfrau, exposure_acq_time_s, fg_acq_time, num_images, timeout_factor
+        jungfrau, exp_acq_time_s, fg_acq_time, num_images, timeout_factor
     )
     yield from sleep(0.3)
 

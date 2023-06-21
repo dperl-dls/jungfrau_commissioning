@@ -47,15 +47,14 @@ def create_rotation_scan_devices() -> dict[str, Device]:
 
 
 DIRECTION = RotationDirection.NEGATIVE
-OFFSET = 5.0
 SHUTTER_OPENING_TIME = 0.5
 
 
 def move_to_start_w_buffer(
     axis: EpicsMotor,
     start_angle: float,
+    offset: float,
     wait: bool = True,
-    offset: float = OFFSET,
     direction: RotationDirection = DIRECTION,
 ):
     """Move an EpicsMotor 'axis' to angle 'start_angle', modified by an offset and
@@ -74,9 +73,9 @@ def move_to_start_w_buffer(
 def move_to_end_w_buffer(
     axis: EpicsMotor,
     scan_width: float,
+    offset: float,
     shutter_opening_degrees: float = 2.5,  # default for 100 deg/s
     wait: bool = True,
-    offset: float = OFFSET,
     direction: RotationDirection = DIRECTION,
 ):
     distance_to_move = (scan_width + shutter_opening_degrees + offset + 0.1) * direction
@@ -110,6 +109,12 @@ def rotation_scan_plan(
     speed_for_rotation_deg_s = image_width / exposure_time
     LOGGER.info(f"calculated speed: {speed_for_rotation_deg_s} deg/s")
 
+    acceleration_offset = 0.15 * speed_for_rotation_deg_s
+    LOGGER.info(
+        f"calculated rotation offset for acceleration: at {speed_for_rotation_deg_s} "
+        f"deg/s, to take 0.15s = {acceleration_offset}"
+    )
+
     shutter_opening_degrees = speed_for_rotation_deg_s * params.shutter_opening_time_s
     LOGGER.info(
         f"calculated degrees rotation needed for shutter: {shutter_opening_degrees} deg"
@@ -140,9 +145,7 @@ def rotation_scan_plan(
     yield from read_beam_parameters(beam_params)
 
     LOGGER.info(f"moving omega to beginning, start_angle={start_angle}")
-    yield from move_to_start_w_buffer(
-        gonio.omega, start_angle, offset=params.offset_deg
-    )
+    yield from move_to_start_w_buffer(gonio.omega, start_angle, acceleration_offset)
 
     LOGGER.info(
         f"setting up zebra w: start_angle={start_angle}, scan_width={scan_width}"
@@ -178,8 +181,8 @@ def rotation_scan_plan(
     yield from move_to_end_w_buffer(
         gonio.omega,
         scan_width,
+        acceleration_offset,
         shutter_opening_degrees,
-        offset=params.offset_deg,
         wait=False,
     )
     timeout_factor = max(4, 4 * 0.001 / params.acquire_time_s)

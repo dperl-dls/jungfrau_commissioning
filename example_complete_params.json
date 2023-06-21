@@ -9,7 +9,6 @@
     "y": 0.0,
     "z": 0.0,
     "rotation_direction": "POSITIVE",
-    "offset_deg": 1.0,
     "shutter_opening_time_s": 0.6,
     "storage_directory": "/tmp/jungfrau_data/",
     "nexus_filename": "scan"
