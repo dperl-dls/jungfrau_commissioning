@@ -48,10 +48,17 @@ def do_darks(
     jungfrau: JungfrauM1,
     directory: str = "/dls/i24/data/2023/cm33852-3/jungfrau_commissioning",
     check_for_errors=True,
+    exposure_acq_time_s=0.001,
+    focred_gain_ratio=10,
+    num_images=1000,
 ):
+    """Do a set of 1000 images at dynamic gain, forced gain 1, forced gain 2.
+    For the collections at forced gain modes, the acquisition time will be
+    multiplied by the forced gain ratio."""
     directory_prefix = Path(directory) / f"{date_time_string()}_darks"
 
     # TODO CHECK IF FILES EXIST
+    fg_acq_time = exposure_acq_time_s * focred_gain_ratio
 
     yield from set_software_trigger(jungfrau)
 
@@ -61,21 +68,30 @@ def do_darks(
     )
     yield from abs_set(jungfrau.file_directory, directory_prefix.as_posix(), wait=True)
     yield from abs_set(jungfrau.file_name, "G0", wait=True)
-    yield from do_manual_acquisition(jungfrau, 0.001, 0.001, 1000)
+    yield from do_manual_acquisition(
+        jungfrau, exposure_acq_time_s, exposure_acq_time_s, num_images
+    )
+    yield from sleep(0.3)
 
     # Gain 1
     yield from set_gain_mode(
         jungfrau, GainMode.forceswitchg1, check_for_errors=check_for_errors
     )
     yield from abs_set(jungfrau.file_name, "G1", wait=True)
-    yield from do_manual_acquisition(jungfrau, 0.001, 0.01, 1000)
+    yield from do_manual_acquisition(
+        jungfrau, exposure_acq_time_s, fg_acq_time, num_images
+    )
+    yield from sleep(0.3)
 
     # Gain 2
     yield from set_gain_mode(
         jungfrau, GainMode.forceswitchg2, check_for_errors=check_for_errors
     )
     yield from abs_set(jungfrau.file_name, "G2", wait=True)
-    yield from do_manual_acquisition(jungfrau, 0.001, 0.01, 1000)
+    yield from do_manual_acquisition(
+        jungfrau, exposure_acq_time_s, fg_acq_time, num_images
+    )
+    yield from sleep(0.3)
 
     # Leave on dynamic after finishing
     yield from set_gain_mode(

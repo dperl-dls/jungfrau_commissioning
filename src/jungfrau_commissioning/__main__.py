@@ -42,6 +42,9 @@ To list all the available plans, you can run:
 
     {col.BLUE}list_plans(){col.ENDC}
 
+{col.CYAN}from [module] import *{col.ENDC} has been run for all of these plans, so you \
+can access them without dots.
+
 To list all the available devices in the {col.CYAN}i24{col.ENDC} module you can run:
 
     {col.BLUE}list_devices(){col.ENDC}

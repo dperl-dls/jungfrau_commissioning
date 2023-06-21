@@ -49,7 +49,7 @@ def setup_zebra_for_rotation(
     start_angle: float = 0,
     scan_width: float = 360,
     direction: RotationDirection = RotationDirection.POSITIVE,
-    shutter_time_and_velocity: tuple[float, float] = (0, 0),
+    shutter_opening_deg: float = 2.5,
     group: str = "setup_zebra_for_rotation",
     wait: bool = False,
 ):
@@ -65,19 +65,16 @@ def setup_zebra_for_rotation(
         direction:          RotationDirection enum for representing the direction of
                             rotation of the axis. Used for adjusting the start angle
                             based on shutter time.
-        shutter_time_and_velocity: tuple[float, float] representing the time it takes
-                        (in seconds) for the shutter to open and the velocity of the
-                        scan (in deg/s).
+        shutter_opening_deg How many degrees of movement to delay the pulse to
+                            trigger the detector after the shutter opening signal
+                            has been sent, and increase the gate width by to ensure
+                            rotation through the full scan.
     """
     if not isinstance(direction, RotationDirection):
         raise ValueError(
             "Disallowed rotation direction provided to Zebra setup plan. "
             "Use RotationDirection.POSITIVE or RotationDirection.NEGATIVE."
         )
-
-    shutter_opening_degrees = (
-        shutter_time_and_velocity[1] * shutter_time_and_velocity[0]
-    )
 
     LOGGER.info("ZEBRA SETUP: START")
     LOGGER.info("ZEBRA SETUP: Enable PC")
@@ -90,16 +87,22 @@ def setup_zebra_for_rotation(
         zebra.pc.dir, ("Negative" if direction.value < 0 else "Positive"), group=group
     )
     # Set gate start, adjust for shutter opening time if necessary
-    LOGGER.info(f"ZEBRA SETUP: shutter_time_and_velocity = {shutter_time_and_velocity}")
+    LOGGER.info(f"ZEBRA SETUP: shutter_opening_deg = {shutter_opening_deg}")
     LOGGER.info(f"ZEBRA SETUP: start angle start: {start_angle}")
     LOGGER.info(f"ZEBRA SETUP: start angle adjusted, gate start set to: {start_angle}")
     yield from bps.abs_set(
         zebra.pc.gate_start,
-        start_angle + (direction.value * shutter_opening_degrees),
+        start_angle,
         group=group,
     )
+    # adjust pulse start for shutter time
+    yield from bps.abs_set(zebra.pc.pulse_start, shutter_opening_deg, group=group)
     # set gate width to total width
-    yield from bps.abs_set(zebra.pc.gate_width, scan_width, group=group)
+    yield from bps.abs_set(
+        zebra.pc.gate_width,
+        scan_width + abs(shutter_opening_deg),
+        group=group,
+    )
     # Set gate position to be angle of interest
     yield from bps.abs_set(zebra.pc.gate_trigger, axis.value, group=group)
     # Set pulse width lower than exposure time

@@ -37,7 +37,7 @@ def create_detector_parameters(params: RotationScanParameters) -> Detector:
             ".",
             "translation",
             (0.0, 0.0, 1.0),
-            100,  # TODO get distance
+            105,
         )
     ]
     # Eiger parameters, axes, beam_center, exp_time, [fast, slow]

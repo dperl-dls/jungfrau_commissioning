@@ -47,7 +47,7 @@ def create_rotation_scan_devices() -> dict[str, Device]:
 
 
 DIRECTION = RotationDirection.NEGATIVE
-OFFSET = 1.0
+OFFSET = 5.0
 SHUTTER_OPENING_TIME = 0.5
 
 
@@ -65,7 +65,7 @@ def move_to_start_w_buffer(
     start_position = start_angle - (offset * direction)
     LOGGER.info(
         "moving to_start_w_buffer doing: start_angle-(offset*direction)"
-        f" = {start_angle} - ({offset} * {direction} = {start_position}"
+        f" = {start_angle} - ({offset} * {direction}) = {start_position}"
     )
 
     yield from bps.abs_set(axis, start_position, group="move_to_start", wait=wait)
@@ -74,24 +74,17 @@ def move_to_start_w_buffer(
 def move_to_end_w_buffer(
     axis: EpicsMotor,
     scan_width: float,
+    shutter_opening_degrees: float = 2.5,  # default for 100 deg/s
     wait: bool = True,
     offset: float = OFFSET,
     direction: RotationDirection = DIRECTION,
 ):
-    # TODO adjust this 1 based on shutter time
-    distance_to_move = (scan_width + 1 + offset) * direction
+    distance_to_move = (scan_width + shutter_opening_degrees + offset + 0.1) * direction
     LOGGER.info(
-        f"Given scan width of {scan_width}, offset of {offset}, direction"
+        f"Given scan width of {scan_width}, acceleration offset of {offset}, direction"
         f" {direction}, apply a relative set to omega of: {distance_to_move}"
     )
     yield from bps.rel_set(axis, distance_to_move, group="move_to_end", wait=wait)
-
-
-def set_speed(axis: EpicsMotor, image_width, exposure_time, wait=True):
-    speed_for_rotation = image_width / exposure_time
-    yield from bps.abs_set(
-        axis.velocity, speed_for_rotation, group="set_speed", wait=wait
-    )
 
 
 @bpp.set_run_key_decorator("rotation_scan_main")
@@ -114,6 +107,15 @@ def rotation_scan_plan(
     image_width = params.image_width_deg
     exposure_time = params.exposure_time_s
 
+    speed_for_rotation_deg_s = image_width / exposure_time
+    LOGGER.info(f"calculated speed: {speed_for_rotation_deg_s} deg/s")
+
+    shutter_opening_degrees = speed_for_rotation_deg_s * params.shutter_opening_time_s
+    LOGGER.info(
+        f"calculated degrees rotation needed for shutter: {shutter_opening_degrees} deg"
+        f" for {params.shutter_opening_time_s} at {speed_for_rotation_deg_s} deg/s"
+    )
+
     LOGGER.info("setting up jungfrau")
 
     yield from set_hardware_trigger(jungfrau)
@@ -133,11 +135,14 @@ def rotation_scan_plan(
     yield from bps.sleep(2)
 
     LOGGER.info("reading current x, y, z and beam parameters")
+    # these readings should be recieved by the nexus callback
     yield from read_x_y_z(gonio)
     yield from read_beam_parameters(beam_params)
 
     LOGGER.info(f"moving omega to beginning, start_angle={start_angle}")
-    yield from move_to_start_w_buffer(gonio.omega, start_angle)
+    yield from move_to_start_w_buffer(
+        gonio.omega, start_angle, offset=params.offset_deg
+    )
 
     LOGGER.info(
         f"setting up zebra w: start_angle={start_angle}, scan_width={scan_width}"
@@ -147,10 +152,7 @@ def rotation_scan_plan(
         start_angle=start_angle,
         scan_width=scan_width,
         direction=params.rotation_direction,
-        shutter_time_and_velocity=(
-            params.shutter_opening_time_s,
-            image_width / exposure_time,
-        ),
+        shutter_opening_deg=shutter_opening_degrees,
         group="setup_zebra",
     )
 
@@ -164,12 +166,19 @@ def rotation_scan_plan(
         f"setting rotation speed for image_width, exposure_time"
         f" {image_width, exposure_time} to {image_width/exposure_time}"
     )
-    yield from set_speed(gonio.omega, image_width, exposure_time, wait=True)
-
+    yield from bps.abs_set(
+        gonio.omega, speed_for_rotation_deg_s, group="set_speed", wait=True
+    )
     yield from arm_zebra(zebra)
 
-    LOGGER.info(f"{'increase' if DIRECTION > 0 else 'decrease'} omega by {scan_width}")
-    yield from move_to_end_w_buffer(gonio.omega, scan_width)
+    LOGGER.info(
+        f"{'increase' if DIRECTION > 0 else 'decrease'} omega through {scan_width}"
+        "modified by adjustments for shutter speed and acceleration."
+    )
+    yield from move_to_end_w_buffer(
+        gonio.omega, scan_width, shutter_opening_degrees, offset=params.offset_deg
+    )
+    yield from bps.sleep(1)  # TODO See if this helps shutter closing issue
 
 
 def cleanup_plan(zebra: Zebra, group="cleanup"):
@@ -190,7 +199,7 @@ def get_rotation_scan_plan(params: RotationScanParameters):
     params = deepcopy(
         params
     )  # stop us from accidentally resusing this and nesting directories
-    params.nexus_filename += f"scan_{int(params.scan_width_deg)}deg"
+    params.nexus_filename += f"_scan_{int(params.scan_width_deg)}deg"
     directory = (
         Path(params.storage_directory) / f"{date_time_string()}_{params.nexus_filename}"
     )
