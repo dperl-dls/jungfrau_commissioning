@@ -7,8 +7,8 @@ from dodal.devices.i24.jungfrau import JungfrauM1
 
 from jungfrau_commissioning.plans.jungfrau_plans import (
     check_and_clear_errors,
+    do_manual_acquisition,
     set_software_trigger,
-    setup_detector,
 )
 from jungfrau_commissioning.utils.log import LOGGER
 
@@ -44,30 +44,6 @@ def set_gain_mode(
         yield from check_and_clear_errors(jungfrau)
 
 
-def do_dark_acquisition(
-    jungfrau: JungfrauM1,
-    exp_time_s: float,
-    acq_time_s: float,
-    n_frames: int,
-    timeout_s: float = 3,
-):
-    LOGGER.info("Setting up detector:")
-    yield from setup_detector(jungfrau, exp_time_s, acq_time_s, n_frames, wait=True)
-    yield from abs_set(jungfrau.acquire_start, 1)
-    yield from sleep(acq_time_s * n_frames + 2)
-    # timeout = exp_time_s * n_frames + timeout_s
-    # time = 0.0
-    # still_writing = 1
-    # while time < timeout and still_writing:
-    #     still_writing = yield from rd(jungfrau.writing_rbv)
-    #     yield from sleep(0.1)
-    #     time += 0.1
-    # if still_writing:
-    #     raise TimeoutError(
-    #         f"Acquire did not finish in {exp_time_s * n_frames + timeout} s"
-    #     )
-
-
 def do_darks(
     jungfrau: JungfrauM1,
     directory: str = "/dls/i24/data/2023/cm33852-3/jungfrau_commissioning",
@@ -85,21 +61,21 @@ def do_darks(
     )
     yield from abs_set(jungfrau.file_directory, directory_prefix.as_posix(), wait=True)
     yield from abs_set(jungfrau.file_name, "G0", wait=True)
-    yield from do_dark_acquisition(jungfrau, 0.001, 0.001, 1000)
+    yield from do_manual_acquisition(jungfrau, 0.001, 0.001, 1000)
 
     # Gain 1
     yield from set_gain_mode(
         jungfrau, GainMode.forceswitchg1, check_for_errors=check_for_errors
     )
     yield from abs_set(jungfrau.file_name, "G1", wait=True)
-    yield from do_dark_acquisition(jungfrau, 0.001, 0.01, 1000)
+    yield from do_manual_acquisition(jungfrau, 0.001, 0.01, 1000)
 
     # Gain 2
     yield from set_gain_mode(
         jungfrau, GainMode.forceswitchg2, check_for_errors=check_for_errors
     )
     yield from abs_set(jungfrau.file_name, "G2", wait=True)
-    yield from do_dark_acquisition(jungfrau, 0.001, 0.01, 1000)
+    yield from do_manual_acquisition(jungfrau, 0.001, 0.01, 1000)
 
     # Leave on dynamic after finishing
     yield from set_gain_mode(

@@ -7,11 +7,40 @@ from jungfrau_commissioning.utils.log import LOGGER
 
 
 def set_hardware_trigger(jungfrau: JungfrauM1):
-    yield from bps.abs_set(jungfrau.trigger_mode, TriggerMode.HARDWARE)
+    LOGGER.info("setting hardware triggered mode")
+    yield from bps.abs_set(jungfrau.trigger_mode, TriggerMode.HARDWARE.value)
 
 
 def set_software_trigger(jungfrau: JungfrauM1):
-    yield from bps.abs_set(jungfrau.trigger_mode, TriggerMode.SOFTWARE)
+    yield from bps.abs_set(jungfrau.trigger_mode, TriggerMode.SOFTWARE.value)
+
+
+def do_manual_acquisition(
+    jungfrau: JungfrauM1,
+    exp_time_s: float,
+    acq_time_s: float,
+    n_frames: int,
+    timeout_times: float = 5,
+):
+    LOGGER.info("Setting up detector:")
+    yield from setup_detector(jungfrau, exp_time_s, acq_time_s, n_frames, wait=True)
+    yield from bps.abs_set(jungfrau.acquire_start, 1)
+    # yield from bps.sleep(0.2)
+    # while (yield from bps.rd(jungfrau.acquire_rbv)):
+    #     ...
+    yield from bps.sleep(acq_time_s * n_frames * 3)
+    # timeout = exp_time_s * n_frames * timeout_times
+    # yield from bps.sleep(0.3)
+    # time = 0.5
+    # still_writing = 1
+    # while time < timeout and still_writing:
+    #     still_writing = yield from bps.rd(jungfrau.writing_rbv)
+    #     yield from bps.sleep(0.1)
+    #     time += 0.1
+    # if still_writing:
+    #     raise TimeoutError(
+    #         f"Acquire did not finish in {exp_time_s * n_frames * timeout} s"
+    #     )
 
 
 def setup_detector(
@@ -31,7 +60,7 @@ def setup_detector(
     yield from bps.abs_set(jungfrau.exposure_time_s, exposure_time_s, group=group)
     yield from bps.abs_set(
         jungfrau.acquire_period_s,
-        acquire_time_s / 1e6,
+        acquire_time_s,
         group=group,
     )
     yield from bps.abs_set(

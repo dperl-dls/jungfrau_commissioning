@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+from copy import deepcopy
 from pathlib import Path
 
 import bluesky.plan_stubs as bps
@@ -22,12 +24,7 @@ from jungfrau_commissioning.plans.jungfrau_plans import (
     set_hardware_trigger,
     setup_detector,
 )
-from jungfrau_commissioning.plans.utility_plans import (
-    rd_beam_parameters,
-    rd_x_y_z,
-    read_beam_parameters,
-    read_x_y_z,
-)
+from jungfrau_commissioning.plans.utility_plans import read_beam_parameters, read_x_y_z
 from jungfrau_commissioning.plans.zebra_plans import (
     arm_zebra,
     disarm_zebra,
@@ -81,7 +78,8 @@ def move_to_end_w_buffer(
     offset: float = OFFSET,
     direction: RotationDirection = DIRECTION,
 ):
-    distance_to_move = (scan_width + 0.5 + offset) * direction
+    # TODO adjust this 1 based on shutter time
+    distance_to_move = (scan_width + 1 + offset) * direction
     LOGGER.info(
         f"Given scan width of {scan_width}, offset of {offset}, direction"
         f" {direction}, apply a relative set to omega of: {distance_to_move}"
@@ -127,10 +125,12 @@ def rotation_scan_plan(
         params.get_num_images(),
         wait=True,
     )
-
     yield from set_gain_mode(jungfrau, GainMode.dynamic)
     yield from bps.abs_set(jungfrau.file_directory, directory.as_posix(), wait=True)
     yield from bps.abs_set(jungfrau.file_name, params.nexus_filename, wait=True)
+    LOGGER.info("Setting Acquire to arm detector")
+    yield from bps.abs_set(jungfrau.acquire_start, 1)
+    yield from bps.sleep(2)
 
     LOGGER.info("reading current x, y, z and beam parameters")
     yield from read_x_y_z(gonio)
@@ -187,13 +187,15 @@ def get_rotation_scan_plan(params: RotationScanParameters):
             see "example_params.json" for an example."""
     devices = create_rotation_scan_devices()
 
-    params.nexus_filename = f"scan_{params.scan_width_deg}deg_scan_{params.image_width_deg}_deg_imgs_{params.exposure_time_s}_s_exps"  # noqa
-    directory = Path(params.storage_directory) / f"{date_time_string()}_rotation"
-    # not sure if this works?
-    x, y, z = rd_x_y_z(devices["gonio"])
-    transmission, wavelength, energy, intensity = rd_beam_parameters(
-        devices["beam_params"]
+    params = deepcopy(
+        params
+    )  # stop us from accidentally resusing this and nesting directories
+    params.nexus_filename += f"scan_{int(params.scan_width_deg)}deg"
+    directory = (
+        Path(params.storage_directory) / f"{date_time_string()}_{params.nexus_filename}"
     )
+    os.makedirs(directory.as_posix())
+    params.storage_directory = directory.as_posix()
 
     nexus_writing_callback = NexusFileHandlerCallback()
 
@@ -206,8 +208,6 @@ def get_rotation_scan_plan(params: RotationScanParameters):
             md={
                 "subplan_name": "rotation_scan_with_cleanup",
                 "rotation_scan_params": params.json(),
-                "position": (x, y, z),
-                "beam_params": (transmission, wavelength, energy, intensity),
             }
         )
         @bpp.finalize_decorator(lambda: cleanup_plan(devices["zebra"]))

@@ -5,7 +5,7 @@ from dodal.devices.i24.jungfrau import JungfrauM1
 
 from jungfrau_commissioning.plans.gain_mode_darks_plans import (
     GainMode,
-    do_dark_acquisition,
+    do_manual_acquisition,
     set_gain_mode,
 )
 
@@ -40,5 +40,5 @@ def test_do_dark_acq(
     # zebra: Zebra = fake_devices["zebra"]
     jungfrau: JungfrauM1 = fake_devices["jungfrau"]
 
-    RE(do_dark_acquisition(jungfrau, 0.001, 0.001, 1000))
+    RE(do_manual_acquisition(jungfrau, 0.001, 0.001, 1000))
     jungfrau.acquire_start.set.assert_called()

@@ -74,6 +74,11 @@ def setup_zebra_for_rotation(
             "Disallowed rotation direction provided to Zebra setup plan. "
             "Use RotationDirection.POSITIVE or RotationDirection.NEGATIVE."
         )
+
+    shutter_opening_degrees = (
+        shutter_time_and_velocity[1] * shutter_time_and_velocity[0]
+    )
+
     LOGGER.info("ZEBRA SETUP: START")
     LOGGER.info("ZEBRA SETUP: Enable PC")
     yield from bps.abs_set(zebra.pc.gate_source, PC_GATE_SOURCE_POSITION, group=group)
@@ -81,12 +86,18 @@ def setup_zebra_for_rotation(
     # must be on for shutter trigger to be enabled
     yield from bps.abs_set(zebra.inputs.soft_in_1, 1, group=group)
     # set rotation direction
-    yield from bps.abs_set(zebra.pc.dir, direction.value, group=group)
+    yield from bps.abs_set(
+        zebra.pc.dir, ("Negative" if direction.value < 0 else "Positive"), group=group
+    )
     # Set gate start, adjust for shutter opening time if necessary
     LOGGER.info(f"ZEBRA SETUP: shutter_time_and_velocity = {shutter_time_and_velocity}")
     LOGGER.info(f"ZEBRA SETUP: start angle start: {start_angle}")
     LOGGER.info(f"ZEBRA SETUP: start angle adjusted, gate start set to: {start_angle}")
-    yield from bps.abs_set(zebra.pc.gate_start, start_angle, group=group)
+    yield from bps.abs_set(
+        zebra.pc.gate_start,
+        start_angle + (direction.value * shutter_opening_degrees),
+        group=group,
+    )
     # set gate width to total width
     yield from bps.abs_set(zebra.pc.gate_width, scan_width, group=group)
     # Set gate position to be angle of interest
