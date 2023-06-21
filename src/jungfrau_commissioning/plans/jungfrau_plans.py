@@ -24,7 +24,7 @@ def wait_for_writing(jungfrau: JungfrauM1, timeout_s: float):
         acquiring = yield from bps.rd(jungfrau.acquire_rbv)
         yield from bps.sleep(0.3)
         LOGGER.info(f"{'still' if acquiring else 'stopped'} acquiring")
-    LOGGER.info("acquire_RBV low, waiting for writing_RBV")
+    LOGGER.info("waiting for writing_RBV")
     time = 0.0
     still_writing = 1
     while time < timeout_s and still_writing:

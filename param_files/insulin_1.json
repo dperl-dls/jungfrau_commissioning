@@ -1,13 +1,13 @@
 {
     "rotation_axis": "omega",
-    "scan_width_deg": 720.0,
-    "image_width_deg": 0.1,
+    "scan_width_deg": 360.0,
+    "image_width_deg": 0.2,
     "omega_start_deg": 0.0,
-    "exposure_time_s": 0.001,
-    "acquire_time_s":  0.001,
+    "exposure_time_s": 0.0005,
+    "acquire_time_s":  0.0005,
     "rotation_direction": "NEGATIVE",
-    "offset_deg": 10.0,
+    "offset_deg": 40.0,
     "shutter_opening_time_s": 0.025,
     "storage_directory": "/dls/i24/data/2023/cm33852-3/jungfrau_commissioning",
-    "nexus_filename": "insulin"
+    "nexus_filename": "insulin-fast-really-fast"
 }

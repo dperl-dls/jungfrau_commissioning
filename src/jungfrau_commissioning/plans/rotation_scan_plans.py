@@ -167,7 +167,7 @@ def rotation_scan_plan(
         f" {image_width, exposure_time} to {image_width/exposure_time}"
     )
     yield from bps.abs_set(
-        gonio.omega, speed_for_rotation_deg_s, group="set_speed", wait=True
+        gonio.omega.velocity, speed_for_rotation_deg_s, group="set_speed", wait=True
     )
     yield from arm_zebra(zebra)
 

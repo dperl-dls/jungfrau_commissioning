@@ -51,11 +51,14 @@ def do_darks(
     exposure_acq_time_s=0.001,
     focred_gain_ratio=10,
     num_images=1000,
+    timeout_factor=3,
 ):
     """Do a set of 1000 images at dynamic gain, forced gain 1, forced gain 2.
     For the collections at forced gain modes, the acquisition time will be
     multiplied by the forced gain ratio."""
     directory_prefix = Path(directory) / f"{date_time_string()}_darks"
+
+    timeout_factor = max(3, timeout_factor * 0.001 / exposure_acq_time_s)
 
     # TODO CHECK IF FILES EXIST
     fg_acq_time = exposure_acq_time_s * focred_gain_ratio
@@ -69,7 +72,7 @@ def do_darks(
     yield from abs_set(jungfrau.file_directory, directory_prefix.as_posix(), wait=True)
     yield from abs_set(jungfrau.file_name, "G0", wait=True)
     yield from do_manual_acquisition(
-        jungfrau, exposure_acq_time_s, exposure_acq_time_s, num_images
+        jungfrau, exposure_acq_time_s, exposure_acq_time_s, num_images, timeout_factor
     )
     yield from sleep(0.3)
 
@@ -79,7 +82,7 @@ def do_darks(
     )
     yield from abs_set(jungfrau.file_name, "G1", wait=True)
     yield from do_manual_acquisition(
-        jungfrau, exposure_acq_time_s, fg_acq_time, num_images
+        jungfrau, exposure_acq_time_s, fg_acq_time, num_images, timeout_factor
     )
     yield from sleep(0.3)
 
@@ -89,7 +92,7 @@ def do_darks(
     )
     yield from abs_set(jungfrau.file_name, "G2", wait=True)
     yield from do_manual_acquisition(
-        jungfrau, exposure_acq_time_s, fg_acq_time, num_images
+        jungfrau, exposure_acq_time_s, fg_acq_time, num_images, timeout_factor
     )
     yield from sleep(0.3)
 
