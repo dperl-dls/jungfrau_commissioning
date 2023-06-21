@@ -55,7 +55,7 @@ def create_I24_VGonio_axes(
     scan_points: dict,
 ):
     gonio_axes = [
-        Axis("omega", ".", "rotation", (-1.0, 0.0, 0.0), params.omega_start_deg),
+        Axis("omega", ".", "rotation", (0.0, 1.0, 0.0), params.omega_start_deg),
         Axis(
             name="sam_z",
             depends="omega",
