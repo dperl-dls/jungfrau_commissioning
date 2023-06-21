@@ -78,7 +78,9 @@ def move_to_end_w_buffer(
     wait: bool = True,
     direction: RotationDirection = DIRECTION,
 ):
-    distance_to_move = (scan_width + shutter_opening_degrees + offset + 0.1) * direction
+    distance_to_move = (
+        scan_width + shutter_opening_degrees + offset * 2 + 0.1
+    ) * direction
     LOGGER.info(
         f"Given scan width of {scan_width}, acceleration offset of {offset}, direction"
         f" {direction}, apply a relative set to omega of: {distance_to_move}"
