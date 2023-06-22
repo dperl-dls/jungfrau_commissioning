@@ -59,6 +59,7 @@ def do_manual_acquisition(
     n_frames: int,
     timeout_times: float = 5,
 ):
+    yield from bps.abs_set(jungfrau.trigger_count, 1, wait=True)
     LOGGER.info("Setting up detector...")
     yield from setup_detector(jungfrau, exp_time_s, acq_time_s, n_frames, wait=True)
     LOGGER.info("Setting acquire")
