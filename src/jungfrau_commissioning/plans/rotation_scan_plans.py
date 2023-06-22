@@ -188,11 +188,16 @@ def rotation_scan_plan(
         shutter_opening_degrees,
         wait=False,
     )
-    timeout_factor = max(5, 5 * 0.001 / params.acquire_time_s)
+    timeout_factor = max(15, 15 * 0.001 / params.acquire_time_s)
     timeout_s = 1 + params.acquire_time_s * params.get_num_images() * timeout_factor
+    LOGGER.info(
+        f"Waiting for acquisition and writing to complete with a timeout of {timeout_s} s"  # noqa
+    )
     # wait for writing
     yield from wait_for_writing(jungfrau, timeout_s)
     yield from bps.wait()
+    LOGGER.info("Resetting omega velocity to 100 deg/s")
+    yield from bps.abs_set(gonio.omega.velocity, 100, wait=True)
 
 
 def cleanup_plan(zebra: Zebra, group="cleanup"):
@@ -219,6 +224,9 @@ def get_rotation_scan_plan(params: RotationScanParameters):
     )
     os.makedirs(directory.as_posix())
     params.storage_directory = directory.as_posix()
+    # save the params for the run with the data
+    with open((directory / "experiment_params.json").as_posix(), "w") as f:
+        f.write(params.json(indent=2))
 
     nexus_writing_callback = NexusFileHandlerCallback()
 

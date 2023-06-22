@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import bluesky.plan_stubs as bps
 from dodal.devices.i24.jungfrau import JungfrauM1, TriggerMode
 
 from jungfrau_commissioning.utils.log import LOGGER
+from jungfrau_commissioning.utils.utils import date_time_string
+
+DIRECTORY = "/dls/i24/data/2023/cm33852-3/jungfrau_commissioning/"
+
+
+def subdirectory_with_timestamp(name):
+    return (Path(DIRECTORY) / f"{date_time_string()}_{name}").as_posix()
 
 
 def set_hardware_trigger(jungfrau: JungfrauM1):
@@ -16,7 +25,6 @@ def set_software_trigger(jungfrau: JungfrauM1):
 
 
 def wait_for_writing(jungfrau: JungfrauM1, timeout_s: float):
-    # this is currently broken ?
     yield from bps.sleep(0.2)
     LOGGER.info("waiting for acquire_RBV and writing_RBV:")
     LOGGER.info("waiting for signals to go high...")
@@ -64,6 +72,26 @@ def do_manual_acquisition(
     #     f"Sleeping for acq_time_s * n_frames * {timeout_times} = {acq_time_s * n_frames * timeout_times}"  # noqa
     # )
     # yield from bps.sleep(acq_time_s * n_frames * timeout_times)
+
+
+def do_manual_acq_with_new_filename(
+    jungfrau: JungfrauM1,
+    name: str,
+    exp_time_s: float,
+    acq_time_s: float,
+    n_frames: int,
+    timeout_times: float = 5,
+):
+    directory = subdirectory_with_timestamp(name)
+    LOGGER.info(
+        f"Using directory {directory}, setting directory and filename on detector..."
+    )
+    yield from bps.abs_set(jungfrau.file_name, name, wait=True)
+    yield from bps.abs_set(jungfrau.file_directory, directory, wait=True)
+    yield from bps.sleep(0.2)
+    yield from do_manual_acquisition(
+        jungfrau, exp_time_s, acq_time_s, n_frames, timeout_times
+    )
 
 
 def setup_detector(

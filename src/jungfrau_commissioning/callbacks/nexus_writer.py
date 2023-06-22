@@ -25,10 +25,10 @@ def create_detector_parameters(params: RotationScanParameters) -> Detector:
     """
     jf_params = JungfrauDetector(
         "Jungfrau 1M",
-        (1024, 1024),
+        (1066, 1030),
         "Si",
-        999999999,  # Overload TODO
-        0,
+        1000000,
+        -10,
     )
 
     detector_axes = [
