@@ -11,16 +11,13 @@ from jungfrau_commissioning.plans.jungfrau_plans import (
     set_software_trigger,
 )
 from jungfrau_commissioning.utils.log import LOGGER
+from jungfrau_commissioning.utils.utils import date_time_string
 
 
 class GainMode(str, Enum):
     dynamic = "dynamic"
     forceswitchg1 = "forceswitchg1"
     forceswitchg2 = "forceswitchg2"
-
-
-def date_time_string():
-    return datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S")
 
 
 def set_gain_mode(
