@@ -44,10 +44,14 @@ def do_manual_acquisition(
     n_frames: int,
     timeout_times: float = 3,
 ):
-    LOGGER.info("Setting up detector:")
+    LOGGER.info("Setting up detector...")
     yield from setup_detector(jungfrau, exp_time_s, acq_time_s, n_frames, wait=True)
+    LOGGER.info("Setting acquire")
     yield from bps.abs_set(jungfrau.acquire_start, 1, wait=True)
     # yield from wait_for_writing(jungfrau, acq_time_s * n_frames * timeout_times)
+    LOGGER.info(
+        f"Sleeping for acq_time_s * n_frames * {timeout_times} = {acq_time_s * n_frames * timeout_times}"  # noqa
+    )
     yield from bps.sleep(acq_time_s * n_frames * timeout_times)
 
 

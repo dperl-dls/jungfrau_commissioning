@@ -187,7 +187,7 @@ def rotation_scan_plan(
         shutter_opening_degrees,
         wait=False,
     )
-    timeout_factor = max(4, 4 * 0.001 / params.acquire_time_s)
+    timeout_factor = max(5, 5 * 0.001 / params.acquire_time_s)
     # wait for writing
     yield from bps.sleep(
         1 + params.acquire_time_s * params.get_num_images() * timeout_factor
