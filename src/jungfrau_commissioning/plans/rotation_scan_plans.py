@@ -23,6 +23,7 @@ from jungfrau_commissioning.plans.gain_mode_darks_plans import (
 from jungfrau_commissioning.plans.jungfrau_plans import (
     set_hardware_trigger,
     setup_detector,
+    wait_for_writing,
 )
 from jungfrau_commissioning.plans.utility_plans import read_beam_parameters, read_x_y_z
 from jungfrau_commissioning.plans.zebra_plans import (
@@ -188,10 +189,9 @@ def rotation_scan_plan(
         wait=False,
     )
     timeout_factor = max(5, 5 * 0.001 / params.acquire_time_s)
+    timeout_s = 1 + params.acquire_time_s * params.get_num_images() * timeout_factor
     # wait for writing
-    yield from bps.sleep(
-        1 + params.acquire_time_s * params.get_num_images() * timeout_factor
-    )
+    yield from wait_for_writing(jungfrau, timeout_s)
     yield from bps.wait()
 
 
