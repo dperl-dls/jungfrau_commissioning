@@ -20,12 +20,12 @@ def set_up_logging_handlers(
 
     Mode defaults to production and can be switched to dev with the --dev flag on run.
     """
-    if not os.path.isdir("/tmp/jungfrau_commissioning_logs/"):
-        os.makedirs("/tmp/jungfrau_commissioning_logs/")
+    if not os.path.isdir("/tmp/jungfrau_commissioning_logs2"):
+        os.makedirs("/tmp/jungfrau_commissioning_logs2")
     handlers = setup_dodal_logging(
         logging_level,
         dev_mode,
-        Path("/tmp/jungfrau_commissioning_logs/log.log"),
+        Path("/tmp/jungfrau_commissioning_logs2/log.log"),
         file_handler_log_level,
     )
 
